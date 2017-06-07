@@ -1,0 +1,9 @@
+name "drmi"
+
+targetType "library"
+description "Modbus protocol"
+authors "Oleg Butko (deviator)"
+copyright "Copyright © 2017"
+license "MIT"
+
+dependency "vibe-d:data" version="~>0.8.0-beta.5"

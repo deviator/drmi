@@ -1,0 +1,13 @@
+.dub
+dub.selections.json
+
+doc
+
+*.a
+*.o
+*.lib
+*.dll
+*.obj
+*.exe
+*-test-*
+*~
