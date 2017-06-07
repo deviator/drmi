@@ -1,28 +1,46 @@
+///
 module drmi;
 
 import vibe.data.json;
 
+///
 alias RMIData = Json;
+///
 RMIData serialize(T)(auto ref const T val) { return val.serializeToJson; }
+///
 T deserialize(T)(auto ref const RMIData d) { return d.deserializeJson!T; }
+///
 auto as(T)(auto ref const RMIData d) @property { return d.deserialize!T; }
 
+///
+RMIData rmiEmptyArrayData() { return Json.emptyArray; }
+
+///
 struct RMICall
 {
+    ///
     string func;
+    ///
     RMIData data;
 }
 
+///
 struct RMIResponse
 {
+    ///
     uint status;
+    ///
     RMICall call;
+    ///
     RMIData data;
 }
 
+///
 class RMIException : Exception
 {
+    ///
     RMIData data;
+    ///
     this(RMIData data)
     {
         this.data = data;
@@ -30,11 +48,14 @@ class RMIException : Exception
     }
 }
 
+///
 interface RMICom
 {
+    ///
     RMIResponse process(RMICall call);
 }
 
+///
 class RMISkeleton(T) : RMICom
     if (is(T == interface))
 {
@@ -43,6 +64,7 @@ protected:
 
 public:
 
+    ///
     this(T server)
     {
         import std.exception : enforce;
@@ -83,9 +105,13 @@ public:
     }
 }
 
+///
 class RMIStub(T) : T
 {
+protected:
     RMICom com;
+public:
+    ///
     this(RMICom com) { this.com = com; }
 
     private mixin template overrideIface()
@@ -100,7 +126,7 @@ class RMIStub(T) : T
 
                 RMICall call;
                 call.func = fname;
-                call.data = Json.emptyArray;
+                call.data = rmiEmptyArrayData;
 
                 foreach (p; ParameterIdentifierTuple!self)
                     call.data ~= mixin(p).serialize;
@@ -199,7 +225,6 @@ unittest
     // for `cli` write RMICom low lovel transaction mechaism realization
     auto cli = new RMIStub!Test(ske);
 
-
     assert(rea.foo("hello", 123) == cli.foo("hello", 123));
     assert(rea.bar(2.71) == cli.bar(2.71));
     assert(rea.bar(3.1415) == cli.bar(3.1415));
@@ -218,8 +243,9 @@ private string rmiFunctionName(alias func)()
     import std.traits : Parameters;
     import std.string : join;
     import std.algorithm : canFind;
-    //static assert(!canFind([__traits(getFunctionAttributes, func)], "@property"),
-    //              "property not allowed: " ~ __traits(identifier, func));
+
+    checkFunction!func;
+
     template s4t(X) { enum s4t = X.stringof; }
 
     static if (Parameters!func.length)
@@ -228,10 +254,24 @@ private string rmiFunctionName(alias func)()
         return __traits(identifier, func) ~ "()";
 }
 
+private void checkFunction(alias func)()
+{
+    import std.algorithm : find;
+    import std.traits : hasFunctionAttributes;
+    enum funcstr = __traits(identifier, __traits(parent, __traits(parent, func))) ~ ":" ~ 
+                    __traits(identifier, __traits(parent, func))
+                    ~ "." ~ __traits(identifier, func);
+    static assert(!hasFunctionAttributes!(func, "@safe"), "@safe not allowed: " ~ funcstr);
+    static assert(!hasFunctionAttributes!(func,  "pure"), "pure not allowed: " ~ funcstr);
+    static assert(!hasFunctionAttributes!(func, "@nogc"), "@nogc not allowed: " ~ funcstr);
+}
+
+
 unittest
 {
-    void foo(int a, double b, string c) {}
+    static auto i = [0];
+    void foo(int a, double b, string c) @system { i ~= 1; }
     static assert(rmiFunctionName!foo == "foo(int,double,string)");
-    void bar() {}
+    void bar() @system { i ~= 2; }
     static assert(rmiFunctionName!bar == "bar()");
 }
