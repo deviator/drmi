@@ -1,7 +1,7 @@
 name "drmi"
 
 targetType "library"
-description "Modbus protocol"
+description "D Remote Method Invocation help wraps"
 authors "Oleg Butko (deviator)"
 copyright "Copyright © 2017"
 license "MIT"
