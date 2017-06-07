@@ -8,6 +8,8 @@ This package not provide low level transport for messages (`RMICall`, `RMIRespon
 
 `class RMIStub(T) : T` is client-side wrap, it's use `RMICom` for sending messages and get's responses.
 
+Your interface methods must have serializable to `vibe.data.json.Json` paramters and return value.
+
 Example:
 ```d
 import drmi;
