@@ -26,7 +26,7 @@ interface Test
     void state(string s) @property;
 }
 
-class Realization : Test
+class Impl : Test
 {
     string _state;
 override:
@@ -44,21 +44,21 @@ override:
 
 void main()
 {
-    auto rea = new Realization;
-    auto ske = new RMISkeleton!Test(rea);
+    auto imp = new Impl;
+    auto ske = new RMISkeleton!Test(imp);
     // use `ske` in low level transaction mechanism
-    // for `cli` write RMICom low lovel transaction mechanism realization
+    // for `cli` write RMICom low lovel transaction mechanism implementation
     auto cli = new RMIStub!Test(ske);
 
-    assert(rea.foo("hello", 123) == cli.foo("hello", 123));
-    assert(rea.bar(2.71) == cli.bar(2.71));
-    assert(rea.bar(3.1415) == cli.bar(3.1415));
-    assert(rea.foo("okda") == cli.foo("okda"));
-    assert(rea.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
+    assert(imp.foo("hello", 123) == cli.foo("hello", 123));
+    assert(imp.bar(2.71) == cli.bar(2.71));
+    assert(imp.bar(3.1415) == cli.bar(3.1415));
+    assert(imp.foo("okda") == cli.foo("okda"));
+    assert(imp.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
 
     static str = "ololo";
     cli.state = str;
-    assert(rea.state == str);
+    assert(imp.state == str);
     assert(cli.state == str);
 }
 ```

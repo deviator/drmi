@@ -200,7 +200,7 @@ private version (unittest)
         void state(string s) @property;
     }
 
-    class Realization : Test
+    class Impl : Test
     {
         string _state;
     override:
@@ -219,10 +219,8 @@ private version (unittest)
 
 unittest
 {
-    auto rea = new Realization;
+    auto rea = new Impl;
     auto ske = new RMISkeleton!Test(rea);
-    // use `ske` in low level transaction mechanism
-    // for `cli` write RMICom low lovel transaction mechaism realization
     auto cli = new RMIStub!Test(ske);
 
     assert(rea.foo("hello", 123) == cli.foo("hello", 123));
