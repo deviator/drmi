@@ -21,6 +21,8 @@ struct RMICall
     ///
     string func;
     ///
+    long ts;
+    ///
     RMIData data;
 }
 
@@ -46,6 +48,16 @@ class RMIException : Exception
         this.data = data;
         super(data.toString);
     }
+}
+
+///
+class RMITimeoutException : Exception
+{
+    import std.conv : text;
+    ///
+    RMICall call;
+    ///
+    this(RMICall c) { call = c; super(text(c)); }
 }
 
 ///
@@ -85,15 +97,15 @@ public:
                 case rmiFunctionName!func:
                     try
                     {
-
                         auto params = Parameters!func.init;
                         foreach (i, type; Parameters!func)
                             params[i] = call.data[i].as!type;
                         
-                        RMIData resData;
+                        RMIData resData = null;
                         enum callstr = "server."~__traits(identifier, func)~"(params)";
                         static if(is(ReturnType!func == void)) mixin(callstr~";");
                         else resData = mixin(callstr).serialize;
+
                         return RMIResponse(0, call, resData);
                     }
                     catch (Throwable e)
@@ -118,7 +130,6 @@ public:
     {
         private enum string packCode =
             q{
-                import std.exception : enforce;
                 enum dummy;
                 alias self = AliasSeq!(__traits(parent, dummy))[0];
 
@@ -126,6 +137,7 @@ public:
 
                 RMICall call;
                 call.func = fname;
+                call.ts = Clock.currStdTime;
                 call.data = rmiEmptyArrayData;
 
                 foreach (p; ParameterIdentifierTuple!self)
@@ -139,6 +151,8 @@ public:
                     return result.data.as!(typeof(return));
             };
 
+        import std.datetime : Clock;
+        import std.exception : enforce;
         import std.meta : staticMap;
         import std.traits : ReturnType, AliasSeq, Parameters, ParameterIdentifierTuple,
                             functionAttributes, FunctionAttribute;
