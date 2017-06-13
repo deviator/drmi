@@ -19,6 +19,8 @@ RMIData rmiEmptyArrayData() { return Json.emptyArray; }
 struct RMICall
 {
     ///
+    string caller;
+    ///
     string func;
     ///
     long ts;
@@ -118,13 +120,20 @@ public:
 }
 
 ///
+interface RMIStubCom : RMICom
+{
+    ///
+    string caller() const @property;
+}
+
+///
 class RMIStub(T) : T
 {
 protected:
-    RMICom com;
+    RMIStubCom com;
 public:
     ///
-    this(RMICom com) { this.com = com; }
+    this(RMIStubCom com) { this.com = com; }
 
     private mixin template overrideIface()
     {
@@ -136,6 +145,7 @@ public:
                 static fname = rmiFunctionName!self;
 
                 RMICall call;
+                call.caller = com.caller;
                 call.func = fname;
                 call.ts = Clock.currStdTime;
                 call.data = rmiEmptyArrayData;
@@ -143,7 +153,7 @@ public:
                 foreach (p; ParameterIdentifierTuple!self)
                     call.data ~= mixin(p).serialize;
 
-                auto result = } ~ "com.process" ~ q{(call);
+                auto result = com.process(call);
 
                 enforce(result.status == 0, new RMIException(result.data));
 
@@ -235,7 +245,11 @@ unittest
 {
     auto rea = new Impl;
     auto ske = new RMISkeleton!Test(rea);
-    auto cli = new RMIStub!Test(ske);
+    auto cli = new RMIStub!Test(new class RMIStubCom
+    {
+        string caller() const @property { return "fake caller"; }
+        RMIResponse process(RMICall call) { return ske.process(call); }
+    });
 
     assert(rea.foo("hello", 123) == cli.foo("hello", 123));
     assert(rea.bar(2.71) == cli.bar(2.71));
@@ -243,7 +257,7 @@ unittest
     assert(rea.foo("okda") == cli.foo("okda"));
     assert(rea.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
 
-    static str = "ololo";
+    static str = "foo";
     cli.state = str;
     assert(rea.state == str);
     assert(cli.state == str);

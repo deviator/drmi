@@ -6,9 +6,9 @@ This package not provide low level transport for messages (`RMICall`, `RMIRespon
 
 `class RMISkeleton(T) : RMICom` is server-side wrap, method `process` must be used in your event loop for dispatch process to real object.
 
-`class RMIStub(T) : T` is client-side wrap, it's use `RMICom` for sending messages and get's responses.
+`class RMIStub(T) : T` is client-side wrap, it's use `class RMIStubCom : RMICom` for sending messages and get's responses. `RMIStubCom` has `string caller() const @property` field for filling `caller` field in `RMICall`.
 
-Your interface methods must have serializable to `vibe.data.json.Json` paramters and return value.
+Your interface methods must have paramters and return value serializable to `vibe.data.json.Json`.
 
 Example:
 ```d
@@ -44,21 +44,23 @@ override:
 
 void main()
 {
-    auto imp = new Impl;
-    auto ske = new RMISkeleton!Test(imp);
-    // use `ske` in low level transaction mechanism
-    // for `cli` write RMICom low lovel transaction mechanism implementation
-    auto cli = new RMIStub!Test(ske);
+    auto rea = new Impl;
+    auto ske = new RMISkeleton!Test(rea);
+    auto cli = new RMIStub!Test(new class RMIStubCom
+    {
+        string caller() const @property { return "fake caller"; }
+        RMIResponse process(RMICall call) { return ske.process(call); }
+    });
 
-    assert(imp.foo("hello", 123) == cli.foo("hello", 123));
-    assert(imp.bar(2.71) == cli.bar(2.71));
-    assert(imp.bar(3.1415) == cli.bar(3.1415));
-    assert(imp.foo("okda") == cli.foo("okda"));
-    assert(imp.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
+    assert(rea.foo("hello", 123) == cli.foo("hello", 123));
+    assert(rea.bar(2.71) == cli.bar(2.71));
+    assert(rea.bar(3.1415) == cli.bar(3.1415));
+    assert(rea.foo("okda") == cli.foo("okda"));
+    assert(rea.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
 
-    static str = "ololo";
+    static str = "foo";
     cli.state = str;
-    assert(imp.state == str);
+    assert(rea.state == str);
     assert(cli.state == str);
 }
 ```
