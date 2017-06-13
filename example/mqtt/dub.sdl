@@ -1,0 +1,25 @@
+name "example"
+
+targetType "executable"
+
+dependency "drmi:mqtt" path="../.."
+
+sourceFiles "iface.d"
+
+configuration "one" {
+    targetName "example_one"
+    mainSourceFile "one.d"
+    excludedSourceFiles "two.d" "three.d"
+}
+
+configuration "two" {
+    targetName "example_two"
+    mainSourceFile "two.d"
+    excludedSourceFiles "one.d" "three.d"
+}
+
+configuration "three" {
+    targetName "example_three"
+    mainSourceFile "three.d"
+    excludedSourceFiles "one.d" "two.d"
+}

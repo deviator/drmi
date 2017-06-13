@@ -1,6 +1,8 @@
 ### D Remote Method Invocation
 
-This package not provide low level transport for messages (`RMICall`, `RMIResponse`), but provide high level wraps around your interfaces for packing arguments.
+This package provide high level wraps for remote method invocation and MQTT low level transport (`drmi:mqtt`) as example.
+
+If you wan't use `drmi:mqtt` see `./example/mqtt`, otherwise read below.
 
 `RMICom` base interface with one method `RMIResponse process(RMICall)`.
 

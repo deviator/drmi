@@ -3,7 +3,23 @@ name "drmi"
 targetType "library"
 description "D Remote Method Invocation help wraps"
 authors "Oleg Butko (deviator)"
-copyright "Copyright © 2017"
+copyright "Copyright © 2017 Oleg Butko"
 license "MIT"
 
 dependency "vibe-d:data" version="~>0.8.0-beta.5"
+
+subPackage {
+    name "mqtt"
+
+    description "mqtt rmi"
+
+    targetType "library"
+
+    sourcePaths "mqtt"
+    importPaths "mqtt"
+
+    dependency "vibe-d:core" version="~>0.8.0-beta.5"
+    dependency "vibe-d:data" version="~>0.8.0-beta.5"
+    dependency "vibe-mqtt" version="~>0.2.0-alpha.4"
+    dependency "drmi" path="./drmi"
+}
