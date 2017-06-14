@@ -10,7 +10,7 @@ class ThreeImpl : Three
 
 int main()
 {
-    auto acc = new Accessor!Three(new ThreeImpl);
+    auto acc = new Accessor!Three(new MqttTransport, new ThreeImpl);
 
     auto one = acc.getClient!One;
     auto two = acc.getClient!Two;

@@ -1,5 +1,4 @@
+///
 module drmi.mqtt;
 
-public:
-import drmi.mqtt.accessor;
-import drmi;
+public import drmi.mqtt.transport;

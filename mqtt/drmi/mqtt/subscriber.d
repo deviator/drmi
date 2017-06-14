@@ -12,13 +12,13 @@ protected:
     {
         string pattern;
         void delegate(string, const(ubyte)[]) func;
+        QoSLevel qos;
     }
 
     CB[] slist;
-    QoSLevel qos;
 
 public:
-    this(Settings s, QoSLevel qos) { super(s); this.qos = qos; }
+    this(Settings s) { super(s); }
 
     override void onPublish(Publish msg)
     {
@@ -31,19 +31,26 @@ public:
         }();
     }
 
-    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb)
+    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, QoSLevel qos)
     {
-        slist ~= CB(pattern, cb);
-        if (this.connected)
-            super.subscribe([pattern], qos);
+        slist ~= CB(pattern, cb, qos);
     }
 
     override void onConnAck(ConnAck ca)
     {
+        import std.algorithm : filter, map;
         super.onConnAck(ca);
         () @trusted
         {
-            super.subscribe(slist.map!(a=>a.pattern).array, qos);
+            void fltr(QoSLevel lvl)
+            {
+                auto lst = slist.filter!(a=>a.qos==lvl).map!(a=>a.pattern).array;
+                if (lst.length) super.subscribe(lst, lvl);
+            }
+
+            fltr(QoSLevel.QoS0);
+            fltr(QoSLevel.QoS1);
+            fltr(QoSLevel.QoS2);
         } ();
     }
 }
