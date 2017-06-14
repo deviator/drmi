@@ -22,8 +22,8 @@ int main()
     runTask({ while (true) testMagicmath(one); });
     runTask({ while (true) testGetArray(one); });
 
-    //runTask({ while (true) testFoo(three); });
-    //runTask({ while (true) testBar(three); });
+    runTask({ while (true) testFoo(three); });
+    runTask({ while (true) testBar(three); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
     return runEventLoop();

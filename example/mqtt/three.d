@@ -23,7 +23,7 @@ int main()
     runTask({ while (true) testMagicmath(one); });
     runTask({ while (true) testGetArray(one); });
 
-    //runTask({ while (true) testSum(two); });
+    runTask({ while (true) testSum(two); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
     return runEventLoop();
