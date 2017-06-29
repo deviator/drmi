@@ -152,16 +152,17 @@ protected:
 
 public:
 
-    this(Transport t, T serv, string uniqName="")
+    this(Transport t, T serv, string uniqName="",
+            Duration waitTime=30.seconds, size_t maxWaitResponses=10)
     {
         ll = enforce(t, "transport is null");
         name = rmiPSClientName!T(uniqName);
         ll.init(name);
 
         defaultRel = Rel.level1;
-        waitTime = 30.seconds;
+        this.waitTime = waitTime;
         waitSleepStep = 1.msecs;
-        maxWaitResponses = 100;
+        this.maxWaitResponses = maxWaitResponses;
 
         skeleton = new RMISkeleton!T(serv);
 
