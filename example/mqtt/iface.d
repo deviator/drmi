@@ -33,7 +33,7 @@ interface Three
     int bar();
 }
 
-void rndSleep() { sleep(uniform(1000, 3000).msecs); }
+void rndSleep() { sleep(uniform(10, 300).msecs); }
 
 static size_t failcount;
 

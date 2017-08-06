@@ -159,7 +159,7 @@ public:
         name = rmiPSClientName!T(uniqName);
         ll.init(name);
 
-        defaultRel = Rel.level1;
+        defaultRel = Rel.level2;
         this.waitTime = waitTime;
         waitSleepStep = 1.msecs;
         this.maxWaitResponses = maxWaitResponses;

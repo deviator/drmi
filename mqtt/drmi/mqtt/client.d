@@ -1,11 +1,11 @@
-module drmi.mqtt.subscriber;
+module drmi.mqtt.client;
 
 import mqttd;
 
 import std.algorithm : map;
 import std.array : array;
 
-class Subscriber : MqttClient
+class IMClient : MqttClient
 {
 protected:
     static struct CB
