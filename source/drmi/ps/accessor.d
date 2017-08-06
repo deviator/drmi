@@ -24,9 +24,14 @@ enum RES_ROOM = "/response/";
 interface Broadcaster
 {
     ///
-    void publish(Json, Rel lvl=Rel.undefined);
+    void publish(string, Rel lvl=Rel.undefined);
+
+    ///
+    final void publish(Json j, Rel lvl=Rel.undefined)
+    { this.publish(j.toPrettyString, lvl); }
     ///
     void publish(T)(T val, Rel lvl=Rel.undefined)
+        if (!is(T == Json))
     { this.publish(val.serializeToPrettyJson, lvl); }
 }
 
@@ -45,17 +50,24 @@ protected:
     string name;
 
     void publish(V)(string topic, V val, Rel lvl=Rel.undefined)
+        if (!is(V == Json))
+    { publish(topic, val.serializeToJson, lvl); }
+
+    void publish(string topic, Json val, Rel lvl=Rel.undefined)
+    { publish(topic, val.toPrettyString, lvl); }
+
+    void publish(string topic, string data, Rel lvl=Rel.undefined)
     {
         if (lvl == Rel.undefined) lvl = defaultRel;
-        ll.publish(topic, cast(const(ubyte)[])val.serializeToPrettyJson, lvl);
+        ll.publish(topic, cast(const(ubyte)[])data, lvl);
     }
 
     class BCaster : Broadcaster
     {
         string topic;
         this(string t) { topic = t; }
-        override void publish(Json d, Rel lvl=Rel.undefined)
-        { this.outer.publish(topic, d, lvl); }
+        override void publish(string s, Rel lvl=Rel.undefined)
+        { this.outer.publish(topic, s, lvl); }
     }
 
     RMISkeleton!T skeleton;
@@ -187,7 +199,8 @@ public:
         });
     }
 
-    void subscribe(V)(string bus, void delegate(string, V bm) dlg)
+    void subscribe(V)(string bus, void delegate(string, V) dlg)
+        if (!is(V == Json) && !is(V == const(ubyte)[]))
     {
         subscribe(bus, (string t, const(ubyte)[] data)
         {
@@ -196,7 +209,9 @@ public:
             bool converted = false;
             try // catch exceptions only while deserialization
             {
-                bm = (cast(string)data).deserializeJson!V;
+                bm = (cast(string)data)
+                        .parseJsonString
+                        .deserializeJson!V;
                 converted = true;
             }
             catch (Exception e)
