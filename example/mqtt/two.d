@@ -9,7 +9,7 @@ class TwoImpl : Two
 
 int main()
 {
-    auto acc = new Accessor!Two(new MqttTransport, new TwoImpl);
+    auto acc = new MqttAccessor!Two(new TwoImpl);
 
     auto one = acc.getClient!One;
     auto three = acc.getClient!Three;

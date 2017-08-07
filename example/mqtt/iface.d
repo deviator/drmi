@@ -4,7 +4,6 @@ public import std.stdio;
 public import std.datetime;
 public import std.format;
 public import std.random;
-public import drmi;
 public import drmi.mqtt;
 public import vibe.core.core;
 

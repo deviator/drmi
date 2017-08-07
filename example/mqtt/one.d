@@ -12,7 +12,7 @@ class OneImpl : One
 
 int main()
 {
-    auto acc = new Accessor!One(new MqttTransport, new OneImpl);
+    auto acc = new MqttAccessor!One(new OneImpl);
 
     auto two = acc.getClient!Two;
     auto three = acc.getClient!Three;
