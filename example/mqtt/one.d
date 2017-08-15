@@ -27,5 +27,5 @@ void main()
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
 
-    while (true) acc.loop();
+    while (acc.loop()) {}
 }

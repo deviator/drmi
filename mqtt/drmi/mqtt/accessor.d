@@ -13,7 +13,7 @@ import std.conv;
 class AFiber : Fiber
 {
     ulong nextTime;
-    this(void delegate() dlg) { super(dlg); }
+    this(void delegate() dlg, size_t sz) { super(dlg, sz); }
 }
 
 void sleep(Duration d)
@@ -45,9 +45,11 @@ void yield()
 ///
 class MqttAccessor(T) : Accessor!T
 {
-
+    size_t stackSize;
     private MqttTransport tr;
     private AFiber[] fibers;
+    private bool work = true;
+    private int exit_result;
 
     ///
     this(T obj, string uniq="")
@@ -57,7 +59,7 @@ class MqttAccessor(T) : Accessor!T
     }
 
     void spawn(void delegate() _body)
-    { fibers ~= new AFiber({ _body(); }); }
+    { fibers ~= new AFiber({ _body(); }, stackSize); }
 
     void spawnInfLoop(void delegate() loop_body)
     {
@@ -68,17 +70,27 @@ class MqttAccessor(T) : Accessor!T
                 loop_body();
                 yield();
             }
-        });
+        }, stackSize);
     }
 
-    ///
-    void loop()
+    void exitLoop(int res=0)
     {
+        work = false;
+        exit_result = res;
+    }
+
+    int exitResult() const @property { return exit_result; }
+
+    ///
+    bool loop()
+    {
+        if (!work) return false;
         fibers = fibers.filter!(f=>f.state != Fiber.State.TERM).array;
         foreach (f; fibers)
             if (f.nextTime < Clock.currStdTime)
                 f.call();
         tr.loop();
         Thread.sleep(1.usecs);
+        return true;
     }
 }
