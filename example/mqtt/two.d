@@ -7,9 +7,9 @@ class TwoImpl : Two
     override int sum(int a, int b) { return a + b; }
 }
 
-int main()
+void main()
 {
-    auto acc = new MqttAccessor!Two(new TwoImpl, (d){ sleep(d); });
+    auto acc = new MqttAccessor!Two(new TwoImpl);
 
     auto one = acc.getClient!One;
     auto three = acc.getClient!Three;
@@ -17,14 +17,15 @@ int main()
     acc.connect();
     sleep(2.seconds);
 
-    runTask({ while (true) testPrintHello(one); });
-    runTask({ while (true) testGetTime(one); });
-    runTask({ while (true) testMagicmath(one); });
-    runTask({ while (true) testGetArray(one); });
+    acc.spawnInfLoop({ testPrintHello(one); });
+    acc.spawnInfLoop({ testGetTime(one); });
+    acc.spawnInfLoop({ testMagicmath(one); });
+    acc.spawnInfLoop({ testGetArray(one); });
 
-    runTask({ while (true) testFoo(three); });
-    runTask({ while (true) testBar(three); });
+    acc.spawnInfLoop({ testFoo(three); });
+    acc.spawnInfLoop({ testBar(three); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
-    return runEventLoop();
+
+    while (true) acc.loop();
 }

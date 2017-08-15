@@ -16,8 +16,6 @@ subPackage {
     sourcePaths "mqtt"
     importPaths "mqtt"
 
-
-    dependency "vibe-d:core" version="~>0.8.1-rc.2"
-    dependency "vibe-mqtt" version="~>0.2.0-alpha.6"
+    libs "mosquitto"
     dependency "drmi" path="./drmi"
 }

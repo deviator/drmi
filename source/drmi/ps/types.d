@@ -2,14 +2,18 @@
 module drmi.ps.types;
 
 ///
-enum Rel
+enum QoS : int
 {
     ///
-    undefined,
+    undefined = -1,
     ///
-    level0,
+    l0 = 0,
     ///
-    level1,
+    l1 = 1,
     ///
-    level2
+    l2 = 2,
+    ///
+    reserved = 3,
+    ///
+    failure = 0x80
 }

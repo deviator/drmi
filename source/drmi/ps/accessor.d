@@ -20,12 +20,12 @@ enum RES_ROOM = "/response/";
 interface Broadcaster
 {
     ///
-    void publish(const(ubyte)[], Rel lvl=Rel.undefined);
+    void publish(const(ubyte)[], QoS qos=QoS.undefined);
 
     ///
-    final void publish(T)(T val, Rel lvl=Rel.undefined)
+    final void publish(T)(T val, QoS qos=QoS.undefined)
         if (!is(Unqual!T == ubyte[]))
-    { this.publish(val.sbinSerialize, lvl); }
+    { this.publish(val.sbinSerialize, qos); }
 }
 
 ///
@@ -34,7 +34,7 @@ class Accessor(T)
 protected:
     Transport ll;
 
-    Rel defaultRel;
+    QoS defaultQoS;
 
     Duration waitTime;
     Duration waitSleepStep;
@@ -55,22 +55,22 @@ protected:
         }
     }
 
-    void publish(V)(string topic, V val, Rel lvl=Rel.undefined)
+    void publish(V)(string topic, V val, QoS qos=QoS.undefined)
         if (!is(Unqual!T == ubyte[]))
-    { publish(topic, val.sbinSerialize, lvl); }
+    { publish(topic, val.sbinSerialize, qos); }
 
-    void publish(string topic, const(ubyte)[] data, Rel lvl=Rel.undefined)
+    void publish(string topic, const(ubyte)[] data, QoS qos=QoS.undefined)
     {
-        if (lvl == Rel.undefined) lvl = defaultRel;
-        ll.publish(topic, data, lvl);
+        if (qos == QoS.undefined) qos = defaultQoS;
+        ll.publish(topic, data, qos);
     }
 
     class BCaster : Broadcaster
     {
         string topic;
         this(string t) { topic = t; }
-        override void publish(const(ubyte)[] data, Rel lvl=Rel.undefined)
-        { this.outer.publish(topic, data, lvl); }
+        override void publish(const(ubyte)[] data, QoS qos=QoS.undefined)
+        { this.outer.publish(topic, data, qos); }
     }
 
     RMISkeleton!T skeleton;
@@ -82,7 +82,7 @@ protected:
 
         .infof("[%s] *** %s %s %s", cts, call.caller, call.ts, call.func);
         auto res = skeleton.process(call);
-        publish(name ~ RES_ROOM ~ call.caller, res, defaultRel);
+        publish(name ~ RES_ROOM ~ call.caller, res, defaultQoS);
         .infof("[%s] === %s %s", cts, " ".repeat(call.caller.length).joiner(""), call.ts);
     }
 
@@ -132,7 +132,7 @@ protected:
             auto ch = calcHash(call);
             waitList[ch] = ch;
             .infof("[%s] out %s %s", cts, call.ts, call.func);
-            publish(reqbus, call, defaultRel);
+            publish(reqbus, call, defaultQoS);
             auto tm = StopWatch(AutoStart.yes);
             while (ch in waitList)
             {
@@ -160,7 +160,7 @@ public:
         name = rmiPSClientName!T(uniqName);
         ll.init(name);
 
-        defaultRel = Rel.level2;
+        defaultQoS = QoS.l2;
         this.waitTime = waitTime;
         this.waitSleepStep = waitSleepStep;
         this.maxWaitResponses = maxWaitResponses;
@@ -178,7 +178,7 @@ public:
     Broadcaster getBroadcaster(string topic) { return new BCaster(topic); }
 
     void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg)
-    { ll.subscribe(topic, dlg, defaultRel); }
+    { ll.subscribe(topic, dlg, defaultQoS); }
 
     void subscribe(V)(string bus, void delegate(string, V) dlg)
         if (!is(V == const(ubyte)[]))

@@ -8,9 +8,9 @@ class ThreeImpl : Three
     override int bar() { static int i; return i++; }
 }
 
-int main()
+void main()
 {
-    auto acc = new MqttAccessor!Three(new ThreeImpl, (d){ sleep(d); });
+    auto acc = new MqttAccessor!Three(new ThreeImpl);
 
     auto one = acc.getClient!One;
     auto two = acc.getClient!Two;
@@ -18,13 +18,14 @@ int main()
     acc.connect();
     sleep(2.seconds);
 
-    runTask({ while (true) testPrintHello(one); });
-    runTask({ while (true) testGetTime(one); });
-    runTask({ while (true) testMagicmath(one); });
-    runTask({ while (true) testGetArray(one); });
+    acc.spawnInfLoop({ testPrintHello(one); });
+    acc.spawnInfLoop({ testGetTime(one); });
+    acc.spawnInfLoop({ testMagicmath(one); });
+    acc.spawnInfLoop({ testGetArray(one); });
 
-    runTask({ while (true) testSum(two); });
+    acc.spawnInfLoop({ testSum(two); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
-    return runEventLoop();
+
+    while (true) acc.loop();
 }

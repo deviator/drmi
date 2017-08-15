@@ -1,145 +1,115 @@
 module drmi.mqtt.client;
 
-import mqttd;
-
 import std.algorithm : map;
+import std.exception;
 import std.array : array;
+import std.string;
 
-class IMClient : MqttClient
+import drmi.mqtt.mosquitto;
+import drmi.ps.types;
+
+static this() { mosquitto_lib_init(); }
+static ~this() { mosquitto_lib_cleanup(); }
+
+class MosquittoClient
 {
 protected:
+    mosquitto mosq;
+
     static struct CB
     {
         string pattern;
         void delegate(string, const(ubyte)[]) func;
-        QoSLevel qos;
+        QoS qos;
     }
 
     CB[] slist;
 
 public:
-    this(Settings s) { super(s); }
 
-    override void onPublish(Publish msg)
+    struct Message
     {
-        super.onPublish(msg);
-        () @trusted
+        string topic;
+        const(ubyte)[] payload;
+    }
+
+    struct Settings
+    {
+        string host = "127.0.0.1";
+        ushort port = 1883;
+        string clientId;
+        bool cleanSession;
+        int keepalive;
+    }
+
+    Settings settings;
+
+    void delegate() onConnect;
+
+    extern(C) static void onConnectCallback(mosquitto mosq, void* cptr, int res)
+    {
+        auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
+        enum Res
         {
-            foreach (cb; slist)
-                if (match(msg.topic, cb.pattern))
-                    cb.func(msg.topic, msg.payload);
-        }();
-    }
-
-    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, QoSLevel qos)
-    {
-        slist ~= CB(pattern, cb, qos);
-    }
-
-    override void onConnAck(ConnAck ca)
-    {
-        import std.algorithm : filter, map;
-        super.onConnAck(ca);
-        () @trusted
-        {
-            void fltr(QoSLevel lvl)
-            {
-                auto lst = slist.filter!(a=>a.qos==lvl).map!(a=>a.pattern).array;
-                if (lst.length) super.subscribe(lst, lvl);
-            }
-
-            fltr(QoSLevel.QoS0);
-            fltr(QoSLevel.QoS1);
-            fltr(QoSLevel.QoS2);
-        } ();
-    }
-}
-
-private bool match(string topic, string pattern)
-{
-    enum ANY = "+";
-    enum ANYLVL = "#";
-
-    import std.algorithm : find;
-    import std.exception : enforce;
-    import std.string : split;
-
-    debug (TopicMatchDebug) import std.stdio;
-
-    auto pat = pattern.split("/");
-
-    auto fanylvl = pat.find(ANYLVL);
-    enforce(fanylvl.length <= 1, "# must be final char");
-
-    auto top = topic.split("/");
-
-    if (fanylvl.length == 0 && pat.length != top.length)
-    {
-        debug (TopicMatchDebug) stderr.writeln("no ANYLVL and mismatch levels: ", pat, " ", top, " returns false");
-        return false;
-    }
-
-    foreach (i, e; pat)
-    {
-        if (i >= top.length)
-        {
-            debug (TopicMatchDebug) stderr.writeln("pat length more that top: ", pat, " ", top, " returns false");
-            return false;
+            success = 0,
+            unacceptable_protocol_version = 1,
+            identifier_rejected = 2,
+            broker_unavailable = 3
         }
-        if (e != top[i])
+        enforce(res == 0, format("connection error: %s", cast(Res)res));
+        cli.subscribeList();
+        if (cli.onConnect !is null) cli.onConnect();
+    }
+
+    extern(C) static void onMessageCallback(mosquitto mosq, void* cptr, const mosquitto_message* msg)
+    {
+        auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
+        cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen].dup));
+    }
+
+    this(Settings s)
+    {
+        import core.stdc.errno;
+
+        settings = s;
+
+        mosq = enforce(mosquitto_new(s.clientId.toStringz, s.cleanSession, cast(void*)this),
+        format("error while create mosquitto: %d", errno));
+
+        mosquitto_connect_callback_set(mosq, &onConnectCallback);
+        //mosquitto_disconnect_callback_set(mosq, &onDisconnectCallback);
+        mosquitto_message_callback_set(mosq, &onMessageCallback);
+    }
+
+    void loop() { mosquitto_loop(mosq, 0, 1); }
+
+    void connect()
+    {
+        if (auto r = mosquitto_connect(mosq, settings.host.toStringz, settings.port, settings.keepalive))
+            enforce(false, format("error while connection: %s", cast(MOSQ_ERR)r));
+    }
+
+    protected void onMessage(Message msg)
+    {
+        foreach (cb; slist)
         {
-            if (i == pat.length - 1 && e == ANYLVL)
-            {
-                debug (TopicMatchDebug) stderr.writeln("matched: ", pat, " ", top);
-                return true;
-            }
-            else if (e == ANY) { /+ pass +/ }
-            else
-            {
-                debug (TopicMatchDebug) stderr.writefln("%s %s mismatch %s and %s (idx: %d) returns false", pat, top, e, top[i], i);
-                return false;
-            }
+            bool res;
+            mosquitto_topic_matches_sub(cb.pattern.toStringz,
+                                        msg.topic.toStringz,
+                                        &res);
+            if (res) cb.func(msg.topic, msg.payload);
         }
     }
-    debug (TopicMatchDebug) stderr.writeln("matched: ", pat, " ", top);
-    return true;
-}
 
-unittest
-{
-    import std.exception;
-    assertThrown(match("any", "#/"));
-    assertNotThrown(match("any", "/#"));
+    void publish(string t, const(ubyte)[] d, QoS qos=QoS.l0, bool retain=false)
+    { mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
 
-    assert( match("a/b/c/d", "a/b/c/d"));
-    assert( match("a/b/c/d", "+/b/c/d"));
-    assert( match("a/b/c/d", "a/+/c/d"));
-    assert( match("a/b/c/d", "a/b/+/d"));
-    assert( match("a/b/c/d", "a/b/c/+"));
-    assert( match("a/b/c/d", "+/b/c/+"));
-    assert( match("a/b/c/d", "a/+/c/+"));
-    assert( match("a/b/c/d", "a/b/+/+"));
-    assert( match("a/b/c/d", "+/b/+/+"));
-    assert( match("a/b/c/d", "a/+/+/+"));
-    assert( match("a/b/c/d", "+/+/+/+"));
+    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, QoS qos)
+    { slist ~= CB(pattern, cb, qos); }
 
-    assert(!match("a/b/c/d", "b/+/c/d"));
-    assert(!match("a/b/c/d", "a/b/c"));
-    assert(!match("a/b/c/d", "+/+/+"));
-
-    assert(!match("a/b/c/d", "+/+/+"));
-    assert( match("a/b/c/d", "+/+/#"));
-    assert(!match("a/b", "+/+/#"));
-    assert( match("a/b/", "+/+/#"));
-
-    assert( match("/a/b", "#"));
-    assert( match("/a//b", "#"));
-    assert( match("a//b", "#"));
-    assert( match("a/b", "#"));
-    assert( match("a/b/", "#"));
-    assert( match("/a/b", "/#"));
-    assert( match("/a/b", "/+/b"));
-    assert( match("/a/b", "+/+/b"));
-    assert( match("/a//b", "/#"));
-    assert( match("/a//b", "/a/+/b"));
+    protected void subscribeList()
+    {
+        foreach (cb; slist)
+            mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
+    }
 }

@@ -1,17 +1,12 @@
 module iface;
 
+public import std.experimental.logger;
 public import std.stdio;
 public import std.datetime;
 public import std.format;
 public import std.random;
+public import core.thread;
 public import drmi.mqtt;
-public import vibe.core.core;
-
-static this()
-{
-    import vibe.core.log;
-    setLogLevel(LogLevel.debugV);
-}
 
 interface One
 {
@@ -32,7 +27,10 @@ interface Three
     int bar();
 }
 
-void rndSleep() { sleep(uniform(10, 300).msecs); }
+void rndSleep()
+{
+    sleep(uniform(10, 300).msecs);
+}
 
 static size_t failcount;
 

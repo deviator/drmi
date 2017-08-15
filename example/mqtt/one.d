@@ -10,9 +10,9 @@ class OneImpl : One
     override int[] getArray(int c) { return ((new int[](c))[] = c); }
 }
 
-int main()
+void main()
 {
-    auto acc = new MqttAccessor!One(new OneImpl, (d){ sleep(d); });
+    auto acc = new MqttAccessor!One(new OneImpl);
 
     auto two = acc.getClient!Two;
     auto three = acc.getClient!Three;
@@ -20,11 +20,12 @@ int main()
     acc.connect();
     sleep(2.seconds);
 
-    runTask({ while (true) testSum(two); });
+    acc.spawnInfLoop({ testSum(two); });
 
-    runTask({ while (true) testFoo(three); });
-    runTask({ while (true) testBar(three); });
+    acc.spawnInfLoop({ testFoo(three); });
+    acc.spawnInfLoop({ testBar(three); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
-    return runEventLoop();
+
+    while (true) acc.loop();
 }
