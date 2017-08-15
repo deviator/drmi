@@ -32,6 +32,7 @@ public:
     {
         import std.meta;
         import std.traits;
+        import std.typecons : tuple;
 
         template ov(string s) { alias ov = AliasSeq!(__traits(getOverloads, T, s)); }
 
@@ -43,21 +44,22 @@ public:
                     try
                     {
                         auto params = Parameters!func.init;
-                        foreach (i, type; Parameters!func)
-                            params[i] = call.data[i].deserializeJson!type;
+
+                        static if (params.length)
+                            params = call.data.sbinDeserialize!(typeof(tuple(params)));
                         
-                        Json resData = null;
+                        ubyte[] resData;
                         enum callstr = "server."~__traits(identifier, func)~"(params)";
                         static if(is(ReturnType!func == void)) mixin(callstr~";");
-                        else resData = mixin(callstr).serializeToJson;
+                        else resData = mixin(callstr).sbinSerialize;
 
                         return RMIResponse(0, call, resData);
                     }
                     catch (Throwable e)
-                        return RMIResponse(2, call, e.msg.serializeToJson);
+                        return RMIResponse(2, call, e.msg.sbinSerialize);
             }
             default:
-                return RMIResponse(1, call, "unknown func".serializeToJson);
+                return RMIResponse(1, call, "unknown func".sbinSerialize);
         }
     }
 }
@@ -91,21 +93,24 @@ public:
                 call.caller = com.caller;
                 call.func = fname;
                 call.ts = Clock.currStdTime;
-                call.data = rmiEmptyArrayData;
 
-                foreach (p; ParameterIdentifierTuple!self)
-                    call.data ~= mixin(p).serializeToJson;
+                auto tmp = tuple(Parameters!self.init);
+                foreach (i, p; ParameterIdentifierTuple!self)
+                    tmp[i] = mixin(p);
+
+                call.data = tmp.sbinSerialize;
 
                 auto result = com.process(call);
 
                 enforce(result.status == 0, new RMIProcessException(result));
 
                 static if (!is(typeof(return) == void))
-                    return result.data.deserializeJson!(typeof(return));
+                    return result.data.sbinDeserialize!(typeof(return));
             };
 
         import std.datetime : Clock;
         import std.exception : enforce;
+        import std.typecons : tuple;
         import std.meta : staticMap;
         import std.traits : ReturnType, AliasSeq, Parameters, ParameterIdentifierTuple,
                             functionAttributes, FunctionAttribute;

@@ -1,10 +1,7 @@
 ///
 module drmi.types;
 
-public import vibe.data.json;
-
-///
-Json rmiEmptyArrayData() { return Json.emptyArray; }
+public import drmi.sbin;
 
 ///
 struct RMICall
@@ -16,7 +13,7 @@ struct RMICall
     ///
     long ts;
     ///
-    Json data;
+    ubyte[] data;
 }
 
 ///
@@ -27,5 +24,5 @@ struct RMIResponse
     ///
     RMICall call;
     ///
-    Json data;
+    ubyte[] data;
 }
