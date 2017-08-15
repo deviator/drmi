@@ -1,0 +1,4 @@
+name "example_simple"
+targetType "executable"
+sourceFiles "app.d"
+dependency "drmi" path="../.."

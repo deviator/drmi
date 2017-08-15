@@ -2,67 +2,14 @@
 
 This package provide high level wraps for remote method invocation and MQTT low level transport (`drmi:mqtt`) as example.
 
-If you wan't use `drmi:mqtt` see `./example/mqtt`, otherwise read below.
-
 `RMICom` base interface with one method `RMIResponse process(RMICall)`.
 
 `class RMISkeleton(T) : RMICom` is server-side wrap, method `process` must be used in your event loop for dispatch process to real object.
 
 `class RMIStub(T) : T` is client-side wrap, it's use `class RMIStubCom : RMICom` for sending messages and get's responses. `RMIStubCom` has `string caller() const @property` field for filling `caller` field in `RMICall`.
 
-Your interface methods must have paramters and return value serializable to `vibe.data.json.Json`.
+Your interface methods must have paramters and return value serializable with `drmi.sbin` (simple binary serialize/deserialize).
 
-Example:
-```d
-import drmi;
+See `example` dir.
 
-struct Point { double x, y, z; }
-
-interface Test
-{
-    int foo(string abc, int xyz);
-    string foo(string str);
-    string bar(double val);
-    double len(Point pnt);
-    string state() @property;
-    void state(string s) @property;
-}
-
-class Impl : Test
-{
-    string _state;
-override:
-    string foo(string str) { return "<" ~ str ~ ">"; }
-    int foo(string abc, int xyz) { return cast(int)(abc.length * xyz); }
-    string bar(double val) { return val > 3.14 ? "big" : "small"; }
-    double len(Point pnt)
-    {
-        import std.math;
-        return sqrt(pnt.x^^2 + pnt.y^^2 + pnt.z^^2);
-    }
-    string state() @property { return _state; }
-    void state(string s) @property { _state = s; }
-}
-
-void main()
-{
-    auto rea = new Impl;
-    auto ske = new RMISkeleton!Test(rea);
-    auto cli = new RMIStub!Test(new class RMIStubCom
-    {
-        string caller() const @property { return "fake caller"; }
-        RMIResponse process(RMICall call) { return ske.process(call); }
-    });
-
-    assert(rea.foo("hello", 123) == cli.foo("hello", 123));
-    assert(rea.bar(2.71) == cli.bar(2.71));
-    assert(rea.bar(3.1415) == cli.bar(3.1415));
-    assert(rea.foo("okda") == cli.foo("okda"));
-    assert(rea.len(Point(1,2,3)) == cli.len(Point(1,2,3)));
-
-    static str = "foo";
-    cli.state = str;
-    assert(rea.state == str);
-    assert(cli.state == str);
-}
-```
+`drmi:mqtt` required `libmosquitto`.
