@@ -13,6 +13,7 @@ import std.conv;
 class AFiber : Fiber
 {
     ulong nextTime;
+    this(void delegate() dlg) { super(dlg); }
     this(void delegate() dlg, size_t sz) { super(dlg, sz); }
 }
 
@@ -45,7 +46,7 @@ void yield()
 ///
 class MqttAccessor(T) : Accessor!T
 {
-    size_t stackSize;
+    size_t stackSize = 1024 * 128;
     private MqttTransport tr;
     private AFiber[] fibers;
     private bool work = true;
@@ -59,7 +60,12 @@ class MqttAccessor(T) : Accessor!T
     }
 
     void spawn(void delegate() _body)
-    { fibers ~= new AFiber({ _body(); }, stackSize); }
+    {
+        if (stackSize > 0)
+            fibers ~= new AFiber({ _body(); }, stackSize);
+        else
+            fibers ~= new AFiber({ _body(); });
+    }
 
     void spawnInfLoop(void delegate() loop_body)
     {

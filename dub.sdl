@@ -11,11 +11,17 @@ subPackage {
 
     description "mqtt rmi"
 
-    targetType "library"
-
     sourcePaths "mqtt"
     importPaths "mqtt"
 
-    libs "mosquitto"
     dependency "drmi" path="./drmi"
+
+    configuration "rtload" {
+        targetType "library"
+    }
+
+    configuration "ctlink" {
+        targetType "library"
+        libs "mosquitto"
+    }
 }

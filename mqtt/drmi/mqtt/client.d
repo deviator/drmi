@@ -81,6 +81,11 @@ public:
         mosquitto_message_callback_set(mosq, &onMessageCallback);
     }
 
+    ~this()
+    {
+        mosquitto_disconnect(mosq);
+    }
+
     void loop() { mosquitto_loop(mosq, 0, 1); }
 
     void connect()
