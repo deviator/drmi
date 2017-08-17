@@ -38,7 +38,7 @@ class SBinDeserializeFieldException : SBinDeserializeException
     size_t readed, expected, fullReaded;
     ///
     this(string mainType, string fieldName, string fieldType,
-         size_t readed, size_t expected, size_t fullReaded)
+         size_t readed, size_t expected, size_t fullReaded) @safe pure
     {
         this.mainType = mainType;
         this.fieldName = fieldName;
