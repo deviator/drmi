@@ -55,6 +55,15 @@ void sbinSerialize(T, R)(auto ref const T val, ref R r)
         r.put((cast(length_t)val.length).pack[]);
         foreach (v; val) sbinSerialize(v, r);
     }
+    else static if (isAssociativeArray!T)
+    {
+        r.put((cast(length_t)val.length).pack[]);
+        foreach (k, v; val)
+        {
+            sbinSerialize(k, r);
+            sbinSerialize(v, r);
+        }
+    }
     else static if (is(T == struct) || isTypeTuple!T)
         foreach (v; val.tupleof) sbinSerialize(v, r);
     else
@@ -112,6 +121,18 @@ Tb sbinDeserialize(Tb, R)(R range)
             T ret;
             ret.length = cast(size_t)impl!length_t(r, ff("length"));
             foreach (i, ref v; ret) v = impl!(typeof(ret[0]))(r, fi(i));
+            return ret;
+        }
+        else static if (isAssociativeArray!T)
+        {
+            T ret;
+            auto length = cast(size_t)impl!length_t(r, ff("length"));
+            foreach (i; 0 .. length)
+            {
+                auto k = impl!(KeyType!T)(r, fi(i)~".key");
+                auto v = impl!(ValueType!T)(r, fi(i)~".val");
+                ret[k] = v;
+            }
             return ret;
         }
         else static if (is(T == struct) || isTypeTuple!T)
@@ -212,4 +233,14 @@ unittest
     auto as = a.sbinSerialize;
     auto as_tr = as[0..17];
     assertThrown!SBinDeserializeException(as_tr.sbinDeserialize!(typeof(a)));
+}
+
+unittest
+{
+    auto a = ["hello" : 123, "ok" : 43];
+    auto as = a.sbinSerialize;
+
+    auto b = as.sbinDeserialize!(typeof(a));
+    assert(b["hello"] == 123);
+    assert(b["ok"] == 43);
 }
