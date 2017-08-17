@@ -1,27 +1,42 @@
+/// Simple binary serialization/deserialization
 module drmi.sbin;
 
-import std.algorithm;
-import std.array;
-import std.bitmanip;
+import std.bitmanip : nativeToLittleEndian, littleEndianToNative;
 import std.exception : enforce, assertThrown;
+import std.range;
 import std.string : format;
 import std.traits;
-import std.range;
 
+///
 alias length_t = ulong;
+///
 alias pack = nativeToLittleEndian;
+///
 alias unpack = littleEndianToNative;
 
+///
 class SBinException : Exception
 {
-    this(string msg, string file=__FILE__, size_t line=__LINE__)
+    this(string msg, string file=__FILE__, size_t line=__LINE__) @safe @nogc pure nothrow
     { super(msg, file, line); }
 }
 
+///
 class SBinDeserializeException : SBinException
 {
+    ///
+    this(string msg, string file=__FILE__, size_t line=__LINE__) @safe @nogc pure nothrow
+    { super(msg, file, line); }
+}
+
+///
+class SBinDeserializeFieldException : SBinDeserializeException
+{
+    ///
     string mainType, fieldName, fieldType;
+    ///
     size_t readed, expected, fullReaded;
+    ///
     this(string mainType, string fieldName, string fieldType,
          size_t readed, size_t expected, size_t fullReaded)
     {
@@ -38,6 +53,12 @@ class SBinDeserializeException : SBinException
     }
 }
 
+/++ Serialize to output ubyte range
+
+    Params:
+        val - serializible value
+        r - output range
++/
 void sbinSerialize(T, R)(auto ref const T val, ref R r)
     if (isOutputRange!(R, ubyte))
 {
@@ -66,26 +87,44 @@ void sbinSerialize(T, R)(auto ref const T val, ref R r)
     }
     else static if (is(T == struct) || isTypeTuple!T)
         foreach (v; val.tupleof) sbinSerialize(v, r);
-    else
-        static assert(0, "unsupported type: " ~ T.stringof);
+    else static assert(0, "unsupported type: " ~ T.stringof);
 }
 
+/++ Serialize to ubyte[]
+
+    using `appender!(ubyte[])` as output range
+
+    Params:
+        val = serializible value
+
+    Returns:
+        serialized data
++/
 ubyte[] sbinSerialize(T)(auto ref const T val)
 {
+    import std.array : appender;
     auto buf = appender!(ubyte[]);
     sbinSerialize(val, buf);
     return buf.data.dup;
 }
 
-Tb sbinDeserialize(Tb, R)(R range)
+/++ Deserialize `Target` value
+
+    Params:
+        range = copy of input range with serialized data
+
+    Returns:
+        deserialized value
+ +/
+Target sbinDeserialize(Target, R)(R range)
 {
     size_t cnt;
 
     ubyte pop(ref R rng, lazy string field, lazy string type,
                 lazy size_t vcnt, lazy size_t vexp)
     {
-        enforce (!rng.empty, new SBinDeserializeException(Tb.stringof,
-                                        field, type, vcnt, vexp, cnt));
+        enforce (!rng.empty, new SBinDeserializeFieldException(
+                    Target.stringof, field, type, vcnt, vexp, cnt));
         auto ret = rng.front;
         rng.popFront();
         cnt++;
@@ -144,8 +183,16 @@ Tb sbinDeserialize(Tb, R)(R range)
         }
         else static assert(0, "unsupported type: " ~ T.stringof);
     }
-    return impl!Tb(range, "");
+
+    auto ret = impl!Target(range, "");
+
+    enforce(range.empty, new SBinDeserializeException(
+        format("input range not empty after full '%s' deserialize", Target.stringof)));
+
+    return ret;
 }
+
+version (unittest) import std.algorithm : equal;
 
 unittest
 {
@@ -167,7 +214,7 @@ unittest
 
 unittest
 {
-    import std.array;
+    import std.array : appender;
     auto ap = appender!(ubyte[]);
 
     struct Cell
@@ -232,6 +279,14 @@ unittest
     auto a = [1,2,3,4];
     auto as = a.sbinSerialize;
     auto as_tr = as[0..17];
+    assertThrown!SBinDeserializeFieldException(as_tr.sbinDeserialize!(typeof(a)));
+}
+
+unittest
+{
+    auto a = [1,2,3,4];
+    auto as = a.sbinSerialize;
+    auto as_tr = as ~ as;
     assertThrown!SBinDeserializeException(as_tr.sbinDeserialize!(typeof(a)));
 }
 
