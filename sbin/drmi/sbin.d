@@ -299,3 +299,25 @@ unittest
     assert(b["hello"] == 123);
     assert(b["ok"] == 43);
 }
+
+unittest
+{
+    enum T { one, two, three }
+    T[] a;
+    with(T) a = [one, two, three, two, three, two, one];
+    auto as = a.sbinSerialize;
+
+    auto b = as.sbinDeserialize!(typeof(a));
+    assert(equal(a, b));
+}
+
+unittest
+{
+    enum T { one="one", two="2", three="III" }
+    T[] a;
+    with(T) a = [one, two, three, two, three, two, one];
+    auto as = a.sbinSerialize;
+
+    auto b = as.sbinDeserialize!(typeof(a));
+    assert(equal(a, b));
+}
