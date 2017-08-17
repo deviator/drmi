@@ -9,28 +9,34 @@ import mosquitto;
 ///
 class MqttTransport : Transport
 {
+private:
     MosquittoClient cli;
+    MosquittoClient ecli() @property { return enforce(cli, "cli is null"); }
+
+public:
+
+    ///
+    this() { initMosquittoLib(); }
 
     ///
     void init(string name)
     {
-        initMosquittoLib();
-
         MosquittoClient.Settings sets;
         sets.clientId = name;
         cli = new MosquittoClient(sets);
     }
 
     ///
-    void connect() { cli.connect(); }
+    void connect() { ecli.connect(); }
+
+    ///
+    void loop() { ecli.loop(); }
 
     ///
     void publish(string topic, const(ubyte)[] data, QoS qos)
-    { enforce(cli).publish(topic, data, qos); }
+    { ecli.publish(topic, data, qos); }
 
     ///
     void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos)
-    { enforce(cli).subscribe(topic, dlg, qos); }
-
-    void loop() { enforce(cli).loop(); }
+    { ecli.subscribe(topic, dlg, qos); }
 }
