@@ -1,9 +1,9 @@
 ///
-module drmi.base;
+module drmi.core.base;
 
-import drmi.types;
-import drmi.exceptions;
-import drmi.helpers;
+import drmi.core.types;
+import drmi.core.exceptions;
+import drmi.core.helpers;
 
 ///
 interface RMICom

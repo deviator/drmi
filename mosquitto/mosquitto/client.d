@@ -1,29 +1,26 @@
-module drmi.mqtt.client;
+module mosquitto.client;
 
 import std.algorithm : map;
 import std.exception;
 import std.array : array;
 import std.string;
 
-import drmi.mqtt.mosquitto;
-import drmi.ps.types;
-
-static this() { mosquitto_lib_init(); }
-static ~this() { mosquitto_lib_cleanup(); }
+public import mosquitto.api : initMosquittoLib, cleanupMosquittoLib;
+import mosquitto.api;
 
 class MosquittoClient
 {
 protected:
-    mosquitto mosq;
+    mosquitto_t mosq;
 
-    static struct CB
+    static struct Callback
     {
         string pattern;
         void delegate(string, const(ubyte)[]) func;
-        QoS qos;
+        int qos;
     }
 
-    CB[] slist;
+    Callback[] slist;
 
 public:
 
@@ -46,7 +43,7 @@ public:
 
     void delegate() onConnect;
 
-    extern(C) static void onConnectCallback(mosquitto mosq, void* cptr, int res)
+    extern(C) protected static void onConnectCallback(mosquitto_t mosq, void* cptr, int res)
     {
         auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
         enum Res
@@ -61,10 +58,28 @@ public:
         if (cli.onConnect !is null) cli.onConnect();
     }
 
-    extern(C) static void onMessageCallback(mosquitto mosq, void* cptr, const mosquitto_message* msg)
+    protected void subscribeList()
+    {
+        foreach (cb; slist)
+            mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
+    }
+
+    extern(C) protected static void onMessageCallback(mosquitto_t mosq, void* cptr, const mosquitto_message* msg)
     {
         auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
         cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen].dup));
+    }
+
+    protected void onMessage(Message msg)
+    {
+        foreach (cb; slist)
+        {
+            bool res;
+            mosquitto_topic_matches_sub(cb.pattern.toStringz,
+                                        msg.topic.toStringz,
+                                        &res);
+            if (res) cb.func(msg.topic, msg.payload);
+        }
     }
 
     this(Settings s)
@@ -77,7 +92,6 @@ public:
         format("error while create mosquitto: %d", errno));
 
         mosquitto_connect_callback_set(mosq, &onConnectCallback);
-        //mosquitto_disconnect_callback_set(mosq, &onDisconnectCallback);
         mosquitto_message_callback_set(mosq, &onMessageCallback);
     }
 
@@ -94,27 +108,9 @@ public:
             enforce(false, format("error while connection: %s", cast(MOSQ_ERR)r));
     }
 
-    protected void onMessage(Message msg)
-    {
-        foreach (cb; slist)
-        {
-            bool res;
-            mosquitto_topic_matches_sub(cb.pattern.toStringz,
-                                        msg.topic.toStringz,
-                                        &res);
-            if (res) cb.func(msg.topic, msg.payload);
-        }
-    }
-
-    void publish(string t, const(ubyte)[] d, QoS qos=QoS.l0, bool retain=false)
+    void publish(string t, const(ubyte)[] d, int qos=0, bool retain=false)
     { mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
 
-    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, QoS qos)
-    { slist ~= CB(pattern, cb, qos); }
-
-    protected void subscribeList()
-    {
-        foreach (cb; slist)
-            mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
-    }
+    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, int qos)
+    { slist ~= Callback(pattern, cb, qos); }
 }

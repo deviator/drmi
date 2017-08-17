@@ -1,7 +1,7 @@
 ///
-module drmi.exceptions;
+module drmi.core.exceptions;
 
-import drmi.types;
+import drmi.core.types;
 
 import std.conv : text;
 

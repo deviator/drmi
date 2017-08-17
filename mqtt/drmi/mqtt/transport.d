@@ -4,7 +4,7 @@ import std.exception : enforce;
 
 public import drmi.ps.iface;
 
-import drmi.mqtt.client;
+import mosquitto;
 
 ///
 class MqttTransport : Transport
@@ -14,6 +14,8 @@ class MqttTransport : Transport
     ///
     void init(string name)
     {
+        initMosquittoLib();
+
         MosquittoClient.Settings sets;
         sets.clientId = name;
         cli = new MosquittoClient(sets);
@@ -30,5 +32,5 @@ class MqttTransport : Transport
     void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos)
     { enforce(cli).subscribe(topic, dlg, qos); }
 
-    void loop() { cli.loop(); }
+    void loop() { enforce(cli).loop(); }
 }

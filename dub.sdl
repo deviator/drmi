@@ -1,27 +1,56 @@
 name "drmi"
 
 targetType "library"
-description "D Remote Method Invocation help wraps"
+description "D Remote Method Invocation"
 authors "Oleg Butko (deviator)"
 copyright "Copyright © 2017 Oleg Butko"
 license "MIT"
 
+dependency ":sbin" version="*"
+dependency ":core" version="*"
+dependency ":mqtt" version="*"
+
 subPackage {
-    name "mqtt"
+    name "sbin"
+    description "Simple binary serialization/deserialization"
+    targetType "sourceLibrary"
+    importPaths "sbin"
+    sourcePaths "sbin"
+}
 
-    description "mqtt rmi"
+subPackage {
+    name "core"
+    targetType "sourceLibrary"
+    description "Base functionality"
+    dependency "drmi:sbin" path="."
+    importPaths "core"
+    sourcePaths "core"
+}
 
-    sourcePaths "mqtt"
-    importPaths "mqtt"
-
-    dependency "drmi" path="./drmi"
+subPackage {
+    name "mosquitto"
+    targetType "library"
+    description "Mosquitto lib binding and minimal wrapper"
+    importPaths "mosquitto"
+    sourcePaths "mosquitto"
 
     configuration "rtload" {
         targetType "library"
     }
 
     configuration "ctlink" {
+        versions "ctlink"
         targetType "library"
         libs "mosquitto"
     }
+}
+
+subPackage {
+    name "mqtt"
+    targetType "library"
+    description "MQTT RMI framework"
+    dependency "drmi:core" path="."
+    dependency "drmi:mosquitto" path="."
+    importPaths "mqtt"
+    sourcePaths "mqtt"
 }

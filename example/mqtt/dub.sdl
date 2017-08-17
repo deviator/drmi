@@ -2,7 +2,7 @@ name "example"
 
 targetType "executable"
 
-dependency "drmi:mqtt" path="../.."
+dependency "drmi" path="../.."
 
 sourceFiles "iface.d"
 

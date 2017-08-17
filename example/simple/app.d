@@ -1,4 +1,4 @@
-import drmi;
+import drmi.core;
 
 struct Point { double x, y, z; }
 

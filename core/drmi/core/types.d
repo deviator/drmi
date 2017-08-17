@@ -1,5 +1,5 @@
 ///
-module drmi.types;
+module drmi.core.types;
 
 public import drmi.sbin;
 

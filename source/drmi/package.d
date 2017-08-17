@@ -1,8 +1,5 @@
-///
 module drmi;
 
-public:
-import drmi.base;
-import drmi.exceptions;
-import drmi.types;
-import drmi.ps;
+public import drmi.sbin;
+public import drmi.core;
+public import drmi.mqtt;

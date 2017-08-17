@@ -1,9 +1,7 @@
 ///
 module drmi.ps.accessor;
 
-import drmi.exceptions;
-import drmi.types;
-import drmi.base;
+import drmi.core;
 
 import drmi.ps.helpers;
 import drmi.ps.iface;
@@ -177,10 +175,10 @@ public:
 
     Broadcaster getBroadcaster(string topic) { return new BCaster(topic); }
 
-    void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg)
-    { ll.subscribe(topic, dlg, defaultQoS); }
+    void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos=QoS.undefined)
+    { ll.subscribe(topic, dlg, qos==QoS.undefined ? defaultQoS : qos); }
 
-    void subscribe(V)(string bus, void delegate(string, V) dlg)
+    void subscribe(V)(string bus, void delegate(string, V) dlg, QoS qos=QoS.undefined)
         if (!is(V == const(ubyte)[]))
     {
         subscribe(bus, (string t, const(ubyte)[] data)
@@ -200,7 +198,7 @@ public:
 
             // if all is ok call delegate
             if (converted) dlg(t, bm);
-        });
+        }, qos);
     }
 
     RMIStub!X getClient(X)(string uniqName="")

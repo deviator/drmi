@@ -1,5 +1,5 @@
 ///
-module drmi.helpers;
+module drmi.core.helpers;
 
 package string rmiFunctionName(alias func)()
 {
