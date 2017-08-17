@@ -1,7 +1,7 @@
 name "drmi"
 
 targetType "library"
-description "D Remote Method Invocation"
+description "D Remote Method Invocation and utilityes"
 authors "Oleg Butko (deviator)"
 copyright "Copyright © 2017 Oleg Butko"
 license "MIT"
@@ -28,9 +28,18 @@ subPackage {
 }
 
 subPackage {
+    name "ssll"
+    targetType "sourceLibrary"
+    description "Simple Shared Library Loading: minimal boilerplate (see mosquitto.api.rtload)"
+    importPaths "ssll"
+    sourcePaths "ssll"
+}
+
+subPackage {
     name "mosquitto"
     targetType "library"
     description "Mosquitto lib binding and minimal wrapper"
+    dependency "drmi:ssll" path="."
     importPaths "mosquitto"
     sourcePaths "mosquitto"
 
