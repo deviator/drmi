@@ -103,7 +103,9 @@ public:
 
                 auto result = com.process(call);
 
-                enforce(result.status == 0, new RMIProcessException(result));
+                enforce(result.status == 0,
+                    new RMIProcessException(result,
+                        result.data.sbinDeserialize!string));
 
                 static if (!is(typeof(return) == void))
                     return result.data.sbinDeserialize!(typeof(return));

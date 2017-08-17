@@ -11,7 +11,7 @@ class RMIProcessException : Exception
     ///
     RMIResponse res;
     ///
-    this(RMIResponse r) { res = r; super("process error for " ~ text(r)); }
+    this(RMIResponse r, string msg) { res = r; super(msg); }
 }
 
 ///
