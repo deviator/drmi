@@ -33,6 +33,7 @@ public:
         import std.meta;
         import std.traits;
         import std.typecons : tuple;
+        import std.conv : to;
 
         template ov(string s) { alias ov = AliasSeq!(__traits(getOverloads, T, s)); }
 
@@ -56,7 +57,7 @@ public:
                         return RMIResponse(0, call, resData);
                     }
                     catch (Throwable e)
-                        return RMIResponse(2, call, e.msg.sbinSerialize);
+                        return RMIResponse(2, call, e.to!string.sbinSerialize);
             }
             default:
                 return RMIResponse(1, call, "unknown func".sbinSerialize);
