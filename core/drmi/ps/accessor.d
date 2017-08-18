@@ -30,7 +30,7 @@ interface Broadcaster
 class Accessor(T)
 {
 protected:
-    Transport ll;
+    Transport tport;
 
     QoS defaultQoS;
 
@@ -60,7 +60,7 @@ protected:
     void publish(string topic, const(ubyte)[] data, QoS qos=QoS.undefined)
     {
         if (qos == QoS.undefined) qos = defaultQoS;
-        ll.publish(topic, data, qos);
+        tport.publish(topic, data, qos);
     }
 
     class BCaster : Broadcaster
@@ -154,9 +154,9 @@ public:
     this(Transport t, T serv, string uniqName="", void delegate(Duration) sf=null,
             Duration waitTime=30.seconds, Duration waitSleepStep=1.msecs, size_t maxWaitResponses=10)
     {
-        ll = enforce(t, "transport is null");
+        tport = enforce(t, "transport is null");
         name = rmiPSClientName!T(uniqName);
-        ll.init(name);
+        tport.init(name);
 
         defaultQoS = QoS.l2;
         this.waitTime = waitTime;
@@ -176,7 +176,7 @@ public:
     Broadcaster getBroadcaster(string topic) { return new BCaster(topic); }
 
     void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos=QoS.undefined)
-    { ll.subscribe(topic, dlg, qos==QoS.undefined ? defaultQoS : qos); }
+    { tport.subscribe(topic, dlg, qos==QoS.undefined ? defaultQoS : qos); }
 
     void subscribe(V)(string bus, void delegate(string, V) dlg, QoS qos=QoS.undefined)
         if (!is(V == const(ubyte)[]))
@@ -209,7 +209,7 @@ public:
         return new RMIStub!X(clicom);
     }
 
-    void connect() { ll.connect(); }
+    void connect() { tport.connect(); }
 }
 
 private long cts()()
