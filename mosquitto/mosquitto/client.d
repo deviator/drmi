@@ -22,6 +22,8 @@ protected:
 
     Callback[] slist;
 
+    bool _connected;
+
 public:
 
     struct Message
@@ -43,31 +45,42 @@ public:
 
     void delegate() onConnect;
 
-    extern(C) protected static void onConnectCallback(mosquitto_t mosq, void* cptr, int res)
+    extern(C) protected static
     {
-        auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
-        enum Res
+
+        void onConnectCallback(mosquitto_t mosq, void* cptr, int res)
         {
-            success = 0,
-            unacceptable_protocol_version = 1,
-            identifier_rejected = 2,
-            broker_unavailable = 3
+            auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
+            enum Res
+            {
+                success = 0,
+                unacceptable_protocol_version = 1,
+                identifier_rejected = 2,
+                broker_unavailable = 3
+            }
+            enforce(res == 0, format("connection error: %s", cast(Res)res));
+            cli._connected = true;
+            cli.subscribeList();
+            if (cli.onConnect !is null) cli.onConnect();
         }
-        enforce(res == 0, format("connection error: %s", cast(Res)res));
-        cli.subscribeList();
-        if (cli.onConnect !is null) cli.onConnect();
+
+        void onDisconnectCallback(mosquitto_t mosq, void* cptr, int res)
+        {
+            auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
+            cli._connected = false;
+        }
+
+        void onMessageCallback(mosquitto_t mosq, void* cptr, const mosquitto_message* msg)
+        {
+            auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
+            cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen].dup));
+        }
     }
 
     protected void subscribeList()
     {
         foreach (cb; slist)
             mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
-    }
-
-    extern(C) protected static void onMessageCallback(mosquitto_t mosq, void* cptr, const mosquitto_message* msg)
-    {
-        auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
-        cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen].dup));
     }
 
     protected void onMessage(Message msg)
@@ -100,6 +113,8 @@ public:
         mosquitto_disconnect(mosq);
     }
 
+    bool connected() const @property { return _connected; }
+
     void loop() { mosquitto_loop(mosq, 0, 1); }
 
     void connect()
@@ -112,5 +127,9 @@ public:
     { mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
 
     void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, int qos)
-    { slist ~= Callback(pattern, cb, qos); }
+    {
+        slist ~= Callback(pattern, cb, qos);
+        if (connected)
+            mosquitto_subscribe(mosq, null, pattern.toStringz, qos);
+    }
 }
