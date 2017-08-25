@@ -5,8 +5,23 @@ import std.exception;
 import std.array : array;
 import std.string;
 
-public import mosquitto.api : initMosquittoLib, cleanupMosquittoLib;
-import mosquitto.api;
+public import mosquitto.api;
+
+class MosquittoException : Exception
+{
+    MOSQ_ERR err;
+    this(MOSQ_ERR err, string func)
+    {
+        this.err = err;
+        super(format("%s returns %d (%s)", func, err, err));
+    }
+}
+
+private void mosqCheck(alias fnc, Args...)(Args args)
+{
+    if (auto r = cast(MOSQ_ERR)fnc(args))
+        throw new MosquittoException(r, __traits(identifier, fnc));
+}
 
 class MosquittoClient
 {
@@ -34,11 +49,11 @@ public:
 
     struct Settings
     {
-        string host = "127.0.0.1";
+        string host = "::1";
         ushort port = 1883;
         string clientId;
-        bool cleanSession;
-        int keepalive;
+        bool cleanSession = false;
+        int keepalive = 5;
     }
 
     Settings settings;
@@ -47,7 +62,6 @@ public:
 
     extern(C) protected static
     {
-
         void onConnectCallback(mosquitto_t mosq, void* cptr, int res)
         {
             auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
@@ -80,7 +94,7 @@ public:
     protected void subscribeList()
     {
         foreach (cb; slist)
-            mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
+            mosqCheck!mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
     }
 
     protected void onMessage(Message msg)
@@ -88,9 +102,9 @@ public:
         foreach (cb; slist)
         {
             bool res;
-            mosquitto_topic_matches_sub(cb.pattern.toStringz,
-                                        msg.topic.toStringz,
-                                        &res);
+            mosqCheck!mosquitto_topic_matches_sub(cb.pattern.toStringz,
+                                              msg.topic.toStringz,
+                                              &res);
             if (res) cb.func(msg.topic, msg.payload);
         }
     }
@@ -108,28 +122,23 @@ public:
         mosquitto_message_callback_set(mosq, &onMessageCallback);
     }
 
-    ~this()
-    {
-        mosquitto_disconnect(mosq);
-    }
+    ~this() { disconnect(); }
 
     bool connected() const @property { return _connected; }
 
-    void loop() { mosquitto_loop(mosq, 0, 1); }
+    void loop() { mosqCheck!mosquitto_loop(mosq, 0, 1); }
 
-    void connect()
-    {
-        if (auto r = mosquitto_connect(mosq, settings.host.toStringz, settings.port, settings.keepalive))
-            enforce(false, format("error while connection: %s", cast(MOSQ_ERR)r));
-    }
+    void connect() { mosqCheck!mosquitto_connect(mosq, settings.host.toStringz, settings.port, settings.keepalive); }
+    void reconnect() { mosqCheck!mosquitto_reconnect(mosq); }
+
+    void disconnect() { mosqCheck!mosquitto_disconnect(mosq); }
 
     void publish(string t, const(ubyte)[] d, int qos=0, bool retain=false)
-    { mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
+    { mosqCheck!mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
 
     void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, int qos)
     {
         slist ~= Callback(pattern, cb, qos);
-        if (connected)
-            mosquitto_subscribe(mosq, null, pattern.toStringz, qos);
+        if (connected) mosqCheck!mosquitto_subscribe(mosq, null, pattern.toStringz, qos);
     }
 }

@@ -9,6 +9,7 @@ import std.array;
 import std.datetime;
 import core.thread;
 import std.conv;
+import std.experimental.logger;
 
 class AFiber : Fiber
 {
@@ -30,8 +31,7 @@ void sleep(Duration d)
         else
         {
             auto sw = StopWatch(AutoStart.yes);
-            while (sw.peek.to!Duration < d)
-                f.yield();
+            while (sw.peek.to!Duration < d) f.yield();
         }
     }
     else Thread.sleep(d);
@@ -46,17 +46,26 @@ void yield()
 ///
 class MqttAccessor(T) : Accessor!T
 {
+protected:
+    MqttTransport tr;
+    AFiber[] fibers;
+    bool work = true;
+    int exit_result;
+
+    void callTransportLoop() { tr.loop(); }
+
+public:
+
+    ///
     size_t stackSize = 1024 * 128;
-    private MqttTransport tr;
-    private AFiber[] fibers;
-    private bool work = true;
-    private int exit_result;
 
     ///
     this(T obj, string uniq="")
     {
         tr = new MqttTransport;
         super(tr, obj, uniq, &sleep);
+
+        spawnInfLoop({ callTransportLoop(); });
     }
 
     void spawn(void delegate() _body)
@@ -95,8 +104,6 @@ class MqttAccessor(T) : Accessor!T
         foreach (f; fibers)
             if (f.nextTime < Clock.currStdTime)
                 f.call();
-        tr.loop();
-        Thread.sleep(1.usecs);
         return true;
     }
 }

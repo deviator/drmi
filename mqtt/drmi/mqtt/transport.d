@@ -4,7 +4,7 @@ import std.exception : enforce;
 
 public import drmi.ps.iface;
 
-import mosquitto;
+public import mosquitto;
 
 ///
 class MqttTransport : Transport
@@ -28,6 +28,10 @@ public:
 
     ///
     void connect() { ecli.connect(); }
+    ///
+    bool connected() { return ecli.connected(); }
+    ///
+    void reconnect() { ecli.reconnect(); }
 
     ///
     void loop() { ecli.loop(); }

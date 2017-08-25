@@ -169,9 +169,7 @@ public:
     }
 
     this(Transport t, T serv, void delegate(Duration) sf=null)
-    {
-        this(t, serv, "", sf);
-    }
+    { this(t, serv, "", sf); }
 
     Broadcaster getBroadcaster(string topic) { return new BCaster(topic); }
 
@@ -210,6 +208,8 @@ public:
     }
 
     void connect() { tport.connect(); }
+
+    bool connected() { return tport.connected(); }
 }
 
 private long cts()()

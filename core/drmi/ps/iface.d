@@ -11,6 +11,8 @@ interface Transport
     ///
     void connect();
     ///
+    bool connected();
+    ///
     void publish(string topic, const(ubyte)[] data, QoS qos);
     ///
     void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos);
