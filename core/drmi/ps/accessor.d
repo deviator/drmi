@@ -8,7 +8,7 @@ import drmi.ps.iface;
 
 import std.datetime;
 import std.string;
-import std.array : appender;
+import std.array : appender, Appender;
 import std.exception : enforce;
 import std.experimental.logger;
 
