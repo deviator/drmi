@@ -1,21 +1,25 @@
 ///
 module drmi.core.helpers;
 
-package string rmiFunctionName(alias func)()
+package template rmiFunctionName(alias func)
 {
-    import std.meta : staticMap;
-    import std.traits : Parameters;
-    import std.string : join;
-    import std.algorithm : canFind;
+    string impl()
+    {
+        import std.meta : staticMap;
+        import std.traits : Parameters;
+        import std.string : join;
+        import std.algorithm : canFind;
 
-    checkFunction!func;
+        checkFunction!func;
 
-    template s4t(X) { enum s4t = X.stringof; }
+        template s4t(X) { enum s4t = X.stringof; }
 
-    static if (Parameters!func.length)
-        return __traits(identifier, func) ~ "(" ~ [staticMap!(s4t, Parameters!func)].join(",") ~ ")";
-    else
-        return __traits(identifier, func) ~ "()";
+        static if (Parameters!func.length)
+            return __traits(identifier, func) ~ "(" ~ [staticMap!(s4t, Parameters!func)].join(",") ~ ")";
+        else
+            return __traits(identifier, func) ~ "()";
+    }
+    enum rmiFunctionName = impl();
 }
 
 package void checkFunction(alias func)()

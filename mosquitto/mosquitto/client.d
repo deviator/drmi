@@ -87,7 +87,7 @@ public:
         void onMessageCallback(mosquitto_t mosq, void* cptr, const mosquitto_message* msg)
         {
             auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
-            cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen].dup));
+            cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen]));
         }
     }
 

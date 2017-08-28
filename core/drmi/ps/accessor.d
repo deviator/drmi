@@ -8,6 +8,7 @@ import drmi.ps.iface;
 
 import std.datetime;
 import std.string;
+import std.array : appender;
 import std.exception : enforce;
 import std.experimental.logger;
 
@@ -23,7 +24,14 @@ interface Broadcaster
     ///
     final void publish(T)(T val, QoS qos=QoS.undefined)
         if (!is(Unqual!T == ubyte[]))
-    { this.publish(val.sbinSerialize, qos); }
+    {
+        auto buf = localAppender();
+        buf.clear();
+        val.sbinSerialize(buf);
+        this.publish(buf.data, qos);
+    }
+
+    protected ref Appender!(ubyte[]) localAppender() @property;
 }
 
 ///
@@ -40,6 +48,8 @@ protected:
 
     string name;
 
+    auto sBuffer = appender!(ubyte[]);
+
     void delegate(Duration d) sleepFunc;
 
     void sleep(Duration t)
@@ -55,7 +65,11 @@ protected:
 
     void publish(V)(string topic, V val, QoS qos=QoS.undefined)
         if (!is(Unqual!T == ubyte[]))
-    { publish(topic, val.sbinSerialize, qos); }
+    {
+        sBuffer.clear();
+        val.sbinSerialize(sBuffer);
+        publish(topic, sBuffer.data, qos);
+    }
 
     void publish(string topic, const(ubyte)[] data, QoS qos=QoS.undefined)
     {
@@ -69,6 +83,8 @@ protected:
         this(string t) { topic = t; }
         override void publish(const(ubyte)[] data, QoS qos=QoS.undefined)
         { this.outer.publish(topic, data, qos); }
+        protected override ref Appender!(ubyte[]) localAppender() @property
+        { return this.outer.sBuffer; }
     }
 
     RMISkeleton!T skeleton;
@@ -78,10 +94,10 @@ protected:
         import std.range : repeat;
         import std.algorithm : joiner;
 
-        .infof("[%s] *** %s %s %s", cts, call.caller, call.ts, call.func);
+        version (drmi_verbose) .infof("[%s] *** %s %s %s", cts, call.caller, call.ts, call.func);
         auto res = skeleton.process(call);
         publish(name ~ RES_ROOM ~ call.caller, res, defaultQoS);
-        .infof("[%s] === %s %s", cts, " ".repeat(call.caller.length).joiner(""), call.ts);
+        version (drmi_verbose) .infof("[%s] === %s %s", cts, " ".repeat(call.caller.length).joiner(""), call.ts);
     }
 
     class CliCom : RMIStubCom
@@ -90,9 +106,11 @@ protected:
         import std.conv : text;
         import std.string;
 
+        alias rhash_t = ubyte[28];
+
         string target, reqbus;
-        RMIResponse[string] responses;
-        string[string] waitList;
+        RMIResponse[rhash_t] responses;
+        rhash_t[rhash_t] waitList;
 
         this(string target)
         {
@@ -100,8 +118,14 @@ protected:
             this.reqbus = target ~ REQ_ROOM;
         }
 
-        string calcHash(RMICall call)
-        { return format("%s:%s", call.func, call.ts); }
+        rhash_t calcHash(RMICall call) @nogc
+        {
+            import std.digest.sha;
+            auto r1 = sha224Of(call.func);
+            auto r2 = sha224Of(cast(ulong[1])[call.ts]);
+            r1[] += r2[];
+            return r1;
+        }
 
         void receive(string t, RMIResponse r)
         {
@@ -110,15 +134,19 @@ protected:
                 .errorf("unexpected response for %s in bus for %s", r.call.caller, caller);
                 return;
             }
-            .infof("[%s]  in %s %s", cts, r.call.ts, r.call.func);
+
+            version (drmi_verbose) .infof("[%s]  in %s %s", cts, r.call.ts, r.call.func);
             auto ch = calcHash(r.call);
-            if (ch in waitList)
+
+            if (ch !in waitList)
             {
-                enforce(ch !in responses, format("internal error: unexpect having result in res for %s", ch));
-                responses[ch] = r;
-                waitList.remove(ch);
+                .errorf("unexpected %s for calls: %s", r, waitList.keys);
+                return;
             }
-            else .errorf("unexpected %s for calls: %s", r, waitList.keys);
+
+            enforce(ch !in responses, format("internal error: unexpect having result in res for %s", ch));
+            responses[ch] = r;
+            waitList.remove(ch);
         }
 
         override string caller() const @property { return name; }
@@ -129,14 +157,14 @@ protected:
                 this.outer.sleep(waitSleepStep * 10);
             auto ch = calcHash(call);
             waitList[ch] = ch;
-            .infof("[%s] out %s %s", cts, call.ts, call.func);
+            version (drmi_verbose) .infof("[%s] out %s %s", cts, call.ts, call.func);
             publish(reqbus, call, defaultQoS);
             auto tm = StopWatch(AutoStart.yes);
             while (ch in waitList)
             {
                 if (cast(Duration)tm.peek > waitTime)
                 {
-                    .infof("[%s] ### %s %s", cts, call.ts, call.func);
+                    version (drmi_verbose) .infof("[%s] ### %s %s", cts, call.ts, call.func);
                     waitList.remove(ch);
                     throw new RMITimeoutException(call);
                 }

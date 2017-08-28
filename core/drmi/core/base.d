@@ -1,6 +1,8 @@
 ///
 module drmi.core.base;
 
+import std.array : appender;
+
 import drmi.core.types;
 import drmi.core.exceptions;
 import drmi.core.helpers;
@@ -19,6 +21,8 @@ class RMISkeleton(T) : RMICom
 protected:
     T server;
 
+    auto sBuffer = appender!(ubyte[]);
+
 public:
 
     ///
@@ -36,6 +40,7 @@ public:
         import std.conv : to;
 
         template ov(string s) { alias ov = AliasSeq!(__traits(getOverloads, T, s)); }
+        sBuffer.clear();
 
         switch (call.func)
         {
@@ -49,18 +54,21 @@ public:
                         static if (params.length)
                             params = call.data.sbinDeserialize!(typeof(tuple(params)));
                         
-                        ubyte[] resData;
                         enum callstr = "server."~__traits(identifier, func)~"(params)";
                         static if(is(ReturnType!func == void)) mixin(callstr~";");
-                        else resData = mixin(callstr).sbinSerialize;
+                        else mixin(callstr).sbinSerialize(sBuffer);
 
-                        return RMIResponse(0, call, resData);
+                        return RMIResponse(0, call, sBuffer.data);
                     }
                     catch (Throwable e)
-                        return RMIResponse(2, call, e.to!string.sbinSerialize);
+                    {
+                        e.to!string.sbinSerialize(sBuffer);
+                        return RMIResponse(2, call, sBuffer.data);
+                    }
             }
             default:
-                return RMIResponse(1, call, "unknown func".sbinSerialize);
+                "unknown func".sbinSerialize(sBuffer);
+                return RMIResponse(1, call, sBuffer.data);
         }
     }
 }
@@ -77,6 +85,8 @@ class RMIStub(T) : T
 {
 protected:
     RMIStubCom com;
+    auto sBuffer = appender!(ubyte[]);
+
 public:
     ///
     this(RMIStubCom com) { this.com = com; }
@@ -99,7 +109,9 @@ public:
                 foreach (i, p; ParameterIdentifierTuple!self)
                     tmp[i] = mixin(p);
 
-                call.data = tmp.sbinSerialize;
+                sBuffer.clear();
+                tmp.sbinSerialize(sBuffer);
+                call.data = sBuffer.data;
 
                 auto result = com.process(call);
 
