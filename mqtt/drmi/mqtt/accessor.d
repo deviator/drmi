@@ -63,7 +63,7 @@ public:
     this(T obj, string uniq="")
     {
         tr = new MqttTransport;
-        super(tr, obj, uniq, &sleep);
+        super(tr, obj, uniq, (s){ .sleep(s); });
 
         spawnInfLoop({ callTransportLoop(); });
     }
