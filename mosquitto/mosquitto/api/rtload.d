@@ -13,9 +13,13 @@ private __gshared void* lib;
 
 int initMosquittoLib()
 {
-    lib = loadLibrary(libmosquitto_name);
-    loadApiSymbols();
-    return mosquitto_lib_init();
+    if (lib is null)
+    {
+        lib = loadLibrary(libmosquitto_name);
+        loadApiSymbols();
+        return mosquitto_lib_init();
+    }
+    return MOSQ_ERR.SUCCESS;
 }
 
 void cleanupMosquittoLib()

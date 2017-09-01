@@ -13,15 +13,19 @@ private:
     MosquittoClient cli;
     MosquittoClient ecli() @property { return enforce(cli, "cli is null"); }
 
+    MosquittoClient.Settings sets;
 public:
 
     ///
-    this() { initMosquittoLib(); }
+    this(MosquittoClient.Settings sets)
+    {
+        this.sets = sets;
+        initMosquittoLib();
+    }
 
     ///
     void init(string name)
     {
-        MosquittoClient.Settings sets;
         sets.clientId = name;
         cli = new MosquittoClient(sets);
     }

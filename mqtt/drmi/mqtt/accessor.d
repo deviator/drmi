@@ -56,13 +56,18 @@ protected:
 
 public:
 
+    alias Settings = MosquittoClient.Settings;
+
     ///
     size_t stackSize = 1024 * 128;
 
     ///
-    this(T obj, string uniq="")
+    this(T obj, string uniq="") { this(obj, Settings.init, uniq); }
+
+    ///
+    this(T obj, Settings sets, string uniq="")
     {
-        tr = new MqttTransport;
+        tr = new MqttTransport(sets);
         super(tr, obj, uniq, (s){ .sleep(s); });
 
         spawnInfLoop({ callTransportLoop(); });
