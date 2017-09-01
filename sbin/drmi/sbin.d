@@ -166,7 +166,9 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
         static if (is(T : double) || is(T : long))
         {
             ubyte[T.sizeof] tmp;
-            foreach (i, ref v; tmp) v = pop(r, field, T.stringof, i, T.sizeof);
+            version (LDC) auto _field = "<LDC-1.4.0 workaround>";
+            else alias _field = field;
+            foreach (i, ref v; tmp) v = pop(r, _field, T.stringof, i, T.sizeof);
             trg = tmp.unpack!T;
         }
         else static if (isSomeString!T)
@@ -365,13 +367,13 @@ unittest
     auto c = as.sbinDeserialize!X;
 
     import std.algorithm;
-    assert(equal(a.one.keys.dup.sort, c.one.keys.dup.sort));
-    assert(equal(a.one.values.dup.sort, c.one.values.dup.sort));
+    assert(equal(sort(a.one.keys.dup), sort(c.one.keys.dup)));
+    assert(equal(sort(a.one.values.dup), sort(c.one.values.dup)));
 
     bs.sbinDeserialize(c);
 
-    assert(equal(b.one.keys.dup.sort, c.one.keys.dup.sort));
-    assert(equal(b.one.values.dup.sort, c.one.values.dup.sort));
+    assert(equal(sort(b.one.keys.dup), sort(c.one.keys.dup)));
+    assert(equal(sort(b.one.values.dup), sort(c.one.values.dup)));
 }
 
 unittest
