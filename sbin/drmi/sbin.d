@@ -111,12 +111,29 @@ ubyte[] sbinSerialize(T)(auto ref const T val)
 /++ Deserialize `Target` value
 
     Params:
-        range = copy of input range with serialized data
+        range = input range with serialized data (not saved before work)
 
     Returns:
         deserialized value
  +/
 Target sbinDeserialize(Target, R)(R range)
+{
+    auto ret = Target.init;
+    range.sbinDeserialize(ret);
+    return ret;
+}
+
+
+/++ Deserialize `Target` value
+
+    Params:
+        range = input range with serialized data (not saved before work)
+        target = reference to result object
+
+    Returns:
+        deserialized value
+ +/
+void sbinDeserialize(Target, R)(R range, ref Target target)
 {
     size_t cnt;
 
@@ -131,7 +148,7 @@ Target sbinDeserialize(Target, R)(R range)
         return ret;
     }
 
-    auto impl(T)(ref R r, lazy string field)
+    auto impl(T)(ref R r, ref T trg, lazy string field)
     {
         string ff(lazy string n) { return field ~ "." ~ n; }
         string fi(size_t i) { return field ~ format("[%d]", i); }
@@ -140,56 +157,58 @@ Target sbinDeserialize(Target, R)(R range)
         {
             ubyte[T.sizeof] tmp;
             foreach (i, ref v; tmp) v = pop(r, field, T.stringof, i, T.sizeof);
-            return tmp.unpack!T;
+            trg = tmp.unpack!T;
         }
         else static if (isSomeString!T)
         {
-            auto length = cast(size_t)impl!length_t(r, ff("length"));
+            length_t l;
+            impl(r, l, ff("length"));
+            auto length = cast(size_t)l;
             auto tmp = new ubyte[](length);
             foreach (i, ref v; tmp) v = pop(r, fi(i), T.stringof, i, length);
-            return cast(T)tmp;
+            trg = cast(T)tmp;
         }
         else static if (isStaticArray!T)
-        {
-            T ret;
-            foreach (i, ref v; ret) v = impl!(typeof(ret[0]))(r, fi(i));
-            return ret;
-        }
+            foreach (i, ref v; trg) impl!(typeof(ret[0]))(r, v, fi(i));
         else static if (isDynamicArray!T)
         {
-            T ret;
-            ret.length = cast(size_t)impl!length_t(r, ff("length"));
-            foreach (i, ref v; ret) v = impl!(typeof(ret[0]))(r, fi(i));
-            return ret;
+            length_t l;
+            impl(r, l, ff("length"));
+            auto length = cast(size_t)l;
+            if (trg.length != length) trg.length = length;
+            foreach (i, ref v; trg) impl(r, v, fi(i));
         }
         else static if (isAssociativeArray!T)
         {
-            T ret;
-            auto length = cast(size_t)impl!length_t(r, ff("length"));
+            length_t l;
+            impl(r, l, ff("length"));
+            auto length = cast(size_t)l;
+
+            trg.clear();
+
             foreach (i; 0 .. length)
             {
-                auto k = impl!(KeyType!T)(r, fi(i)~".key");
-                auto v = impl!(ValueType!T)(r, fi(i)~".val");
-                ret[k] = v;
+                KeyType!T k;
+                ValueType!T v;
+                impl(r, k, fi(i)~".key");
+                impl(r, v, fi(i)~".val");
+                trg[k] = v;
             }
-            return ret;
+
+            trg.rehash();
         }
         else static if (is(T == struct) || isTypeTuple!T)
         {
-            T ret;
-            foreach (i, ref v; ret.tupleof)
-                v = impl!(Unqual!(typeof(v)))(r, ff(__traits(identifier, ret.tupleof[i])));
-            return ret;
+            foreach (i, ref v; trg.tupleof)
+                impl(r, v, ff(__traits(identifier, trg.tupleof[i])));
         }
         else static assert(0, "unsupported type: " ~ T.stringof);
     }
 
-    auto ret = impl!Target(range, "");
+    impl(range, target, "");
 
     enforce(range.empty, new SBinDeserializeException(
         format("input range not empty after full '%s' deserialize", Target.stringof)));
-
-    return ret;
 }
 
 version (unittest) import std.algorithm : equal;
@@ -260,10 +279,7 @@ unittest
 
 unittest
 {
-    static void foo(int a=123, string b="hello")
-    {
-
-    }
+    static void foo(int a=123, string b="hello") { }
     auto a = ParameterDefaults!foo;
 
     import std.typecons;
@@ -298,6 +314,32 @@ unittest
     auto b = as.sbinDeserialize!(typeof(a));
     assert(b["hello"] == 123);
     assert(b["ok"] == 43);
+}
+
+unittest
+{
+    static struct X
+    {
+        string[int] one;
+        int[string] two;
+    }
+
+    auto a = X([3: "hello", 8: "abc"], ["ok": 1, "no": 2]);
+    auto b = X([8: "abc", 15: "ololo"], ["zb": 10]);
+
+    auto as = a.sbinSerialize;
+    auto bs = b.sbinSerialize;
+
+    auto c = as.sbinDeserialize!X;
+
+    import std.algorithm;
+    assert(equal(a.one.keys.dup.sort, c.one.keys.dup.sort));
+    assert(equal(a.one.values.dup.sort, c.one.values.dup.sort));
+
+    bs.sbinDeserialize(c);
+
+    assert(equal(b.one.keys.dup.sort, c.one.keys.dup.sort));
+    assert(equal(b.one.values.dup.sort, c.one.values.dup.sort));
 }
 
 unittest
