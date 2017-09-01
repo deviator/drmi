@@ -59,36 +59,47 @@ class SBinDeserializeFieldException : SBinDeserializeException
         val - serializible value
         r - output range
 +/
-void sbinSerialize(T, R)(auto ref const T val, ref R r)
-    if (isOutputRange!(R, ubyte))
+void sbinSerialize(R, T...)(ref R r, auto ref const T vals)
+    if (isOutputRange!(R, ubyte) && T.length)
 {
-    static if (is(T : double) || is(T : long))
-        r.put(val.pack[]);
-    else static if (isStaticArray!T)
-        foreach (v; val) sbinSerialize(v, r);
-    else static if (isSomeString!T)
+    static if (T.length == 1)
     {
-        r.put((cast(length_t)val.length).pack[]);
-        r.put(cast(ubyte[])val);
-    }
-    else static if (isDynamicArray!T)
-    {
-        r.put((cast(length_t)val.length).pack[]);
-        foreach (v; val) sbinSerialize(v, r);
-    }
-    else static if (isAssociativeArray!T)
-    {
-        r.put((cast(length_t)val.length).pack[]);
-        foreach (k, v; val)
+        alias val = vals[0];
+        static if (is(Unqual!T : double) || is(Unqual!T : long))
+            r.put(val.pack[]);
+        else static if (isStaticArray!T)
+            foreach (ref v; val) r.sbinSerialize(v);
+        else static if (isSomeString!T)
         {
-            sbinSerialize(k, r);
-            sbinSerialize(v, r);
+            r.put((cast(length_t)val.length).pack[]);
+            r.put(cast(ubyte[])val);
         }
+        else static if (isDynamicArray!T)
+        {
+            r.put((cast(length_t)val.length).pack[]);
+            foreach (ref v; val) r.sbinSerialize(v);
+        }
+        else static if (isAssociativeArray!T)
+        {
+            r.put((cast(length_t)val.length).pack[]);
+            foreach (k, ref v; val)
+            {
+                r.sbinSerialize(k);
+                r.sbinSerialize(v);
+            }
+        }
+        else static if (is(T == struct) || isTypeTuple!T)
+            foreach (ref v; val.tupleof) r.sbinSerialize(v);
+        else static assert(0, "unsupported type: " ~ T.stringof);
     }
-    else static if (is(T == struct) || isTypeTuple!T)
-        foreach (v; val.tupleof) sbinSerialize(v, r);
-    else static assert(0, "unsupported type: " ~ T.stringof);
+    else foreach (ref v; vals) r.sbinSerialize(v);
 }
+
+/// ditto
+deprecated("use sbinSerialize(ref R r, auto ref const T val) version")
+void sbinSerialize(R, T)(auto ref const T val, ref R r)
+    if (isOutputRange!(R, ubyte))
+{ sbinSerialize(r, val); }
 
 /++ Serialize to ubyte[]
 
@@ -104,7 +115,7 @@ ubyte[] sbinSerialize(T)(auto ref const T val)
 {
     import std.array : appender;
     auto buf = appender!(ubyte[]);
-    sbinSerialize(val, buf);
+    buf.sbinSerialize(val);
     return buf.data.dup;
 }
 
@@ -123,7 +134,6 @@ Target sbinDeserialize(Target, R)(R range)
     return ret;
 }
 
-
 /++ Deserialize `Target` value
 
     Params:
@@ -133,7 +143,7 @@ Target sbinDeserialize(Target, R)(R range)
     Returns:
         deserialized value
  +/
-void sbinDeserialize(Target, R)(R range, ref Target target)
+void sbinDeserialize(R, Target...)(R range, ref Target target)
 {
     size_t cnt;
 
@@ -205,7 +215,8 @@ void sbinDeserialize(Target, R)(R range, ref Target target)
         else static assert(0, "unsupported type: " ~ T.stringof);
     }
 
-    impl(range, target, "");
+    foreach (ref v; target)
+        impl(range, v, typeof(v).stringof);
 
     enforce(range.empty, new SBinDeserializeException(
         format("input range not empty after full '%s' deserialize", Target.stringof)));
@@ -279,7 +290,9 @@ unittest
 
 unittest
 {
-    static void foo(int a=123, string b="hello") { }
+    static void foo(int a=123, string b="hello")
+    { assert(a==123); assert(b=="hello"); }
+
     auto a = ParameterDefaults!foo;
 
     import std.typecons;
@@ -288,6 +301,16 @@ unittest
     Parameters!foo b;
     b = sa.sbinDeserialize!(typeof(tuple(b)));
     assert(a == b);
+    foo(b);
+
+    a[0] = 234;
+    a[1] = "okda";
+    auto sn = tuple(a).sbinSerialize;
+
+    sn.sbinDeserialize(b);
+
+    assert(b[0] == 234);
+    assert(b[1] == "okda");
 }
 
 unittest
@@ -362,4 +385,37 @@ unittest
 
     auto b = as.sbinDeserialize!(typeof(a));
     assert(equal(a, b));
+}
+
+unittest
+{
+    int ai = 543;
+    auto as = "hello";
+
+    import std.typecons;
+    auto buf = sbinSerialize(tuple(ai, as));
+
+    int bi;
+    string bs;
+    sbinDeserialize(buf, bi, bs);
+
+    assert(ai == bi);
+    assert(bs == as);
+}
+
+unittest
+{
+    int ai = 543;
+    auto as = "hello";
+
+    import std.array : appender;
+    auto buf = appender!(ubyte[]);
+    sbinSerialize(buf, ai, as);
+
+    int bi;
+    string bs;
+    sbinDeserialize(buf.data, bi, bs);
+
+    assert(ai == bi);
+    assert(bs == as);
 }
