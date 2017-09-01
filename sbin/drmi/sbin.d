@@ -232,6 +232,15 @@ unittest
 
 unittest
 {
+    auto a = 123;
+    auto as = a.sbinSerialize;
+    int x;
+    sbinDeserialize(as, x);
+    assert(a == x);
+}
+
+unittest
+{
     auto s = "hello world";
     assert(equal(s.sbinSerialize.sbinDeserialize!string, s));
 }
