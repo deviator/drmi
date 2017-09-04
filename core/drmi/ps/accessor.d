@@ -67,7 +67,7 @@ protected:
         if (!is(Unqual!T == ubyte[]))
     {
         sBuffer.clear();
-        val.sbinSerialize(sBuffer);
+        sBuffer.sbinSerialize(val);
         publish(topic, sBuffer.data, qos);
     }
 

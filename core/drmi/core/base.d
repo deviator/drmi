@@ -56,18 +56,22 @@ public:
                         
                         enum callstr = "server."~__traits(identifier, func)~"(params)";
                         static if(is(ReturnType!func == void)) mixin(callstr~";");
-                        else mixin(callstr).sbinSerialize(sBuffer);
+                        else
+                        {
+                            auto v = mixin(callstr);
+                            sBuffer.sbinSerialize(v);
+                        }
 
                         return RMIResponse(0, call, sBuffer.data);
                     }
                     catch (Throwable e)
                     {
-                        e.to!string.sbinSerialize(sBuffer);
+                        sBuffer.sbinSerialize(e.to!string);
                         return RMIResponse(2, call, sBuffer.data);
                     }
             }
             default:
-                "unknown func".sbinSerialize(sBuffer);
+                sBuffer.sbinSerialize("unknown func");
                 return RMIResponse(1, call, sBuffer.data);
         }
     }
