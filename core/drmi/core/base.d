@@ -114,7 +114,7 @@ public:
                     tmp[i] = mixin(p);
 
                 sBuffer.clear();
-                tmp.sbinSerialize(sBuffer);
+                sBuffer.sbinSerialize(tmp);
                 call.data = sBuffer.data;
 
                 auto result = com.process(call);
