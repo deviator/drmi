@@ -129,7 +129,7 @@ ubyte[] sbinSerialize(T)(auto ref const T val)
  +/
 Target sbinDeserialize(Target, R)(R range)
 {
-    auto ret = Target.init;
+    Unqual!Target ret;
     range.sbinDeserialize(ret);
     return ret;
 }
@@ -181,7 +181,7 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
             trg = cast(T)tmp;
         }
         else static if (isStaticArray!T)
-            foreach (i, ref v; trg) impl!(typeof(ret[0]))(r, v, fi(i));
+            foreach (i, ref v; trg) impl(r, v, fi(i));
         else static if (isDynamicArray!T)
         {
             length_t l;
@@ -217,7 +217,9 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
         else static assert(0, "unsupported type: " ~ T.stringof);
     }
 
-    foreach (ref v; target)
+    static if (target.length == 1)
+        impl(range, target[0], typeof(target[0]).stringof);
+    else foreach (ref v; target)
         impl(range, v, typeof(v).stringof);
 
     enforce(range.empty, new SBinDeserializeException(
@@ -251,6 +253,12 @@ unittest
 {
     immutable(int[]) a = [1,2,3,2,3,2,1];
     assert(a.sbinSerialize.sbinDeserialize!(int[]) == a);
+}
+
+unittest
+{
+    int[5] a = [1,2,3,2,3];
+    assert(a.sbinSerialize.sbinDeserialize!(typeof(a)) == a);
 }
 
 unittest
