@@ -27,7 +27,7 @@ interface Broadcaster
     {
         auto buf = localAppender();
         buf.clear();
-        val.sbinSerialize(buf);
+        buf.sbinSerialize(val);
         this.publish(buf.data, qos);
     }
 
