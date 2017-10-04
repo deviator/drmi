@@ -83,14 +83,13 @@ public:
 
     void spawnInfLoop(void delegate() loop_body)
     {
-        fibers ~= new AFiber(
-        {
+        spawn({
             while (true)
             {
                 loop_body();
                 yield();
             }
-        }, stackSize);
+        });
     }
 
     void exitLoop(int res=0)
