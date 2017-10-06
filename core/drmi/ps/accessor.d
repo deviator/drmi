@@ -63,20 +63,6 @@ protected:
         }
     }
 
-    void publish(V)(string topic, V val, QoS qos=QoS.undefined)
-        if (!is(Unqual!T == ubyte[]))
-    {
-        sBuffer.clear();
-        sBuffer.sbinSerialize(val);
-        publish(topic, sBuffer.data, qos);
-    }
-
-    void publish(string topic, const(ubyte)[] data, QoS qos=QoS.undefined)
-    {
-        if (qos == QoS.undefined) qos = defaultQoS;
-        tport.publish(topic, data, qos);
-    }
-
     class BCaster : Broadcaster
     {
         string topic;
@@ -198,6 +184,20 @@ public:
 
     this(Transport t, T serv, void delegate(Duration) sf=null)
     { this(t, serv, "", sf); }
+
+    void publish(V)(string topic, V val, QoS qos=QoS.undefined)
+        if (!is(Unqual!T == ubyte[]))
+    {
+        sBuffer.clear();
+        sBuffer.sbinSerialize(val);
+        publish(topic, sBuffer.data, qos);
+    }
+
+    void publish(string topic, const(ubyte)[] data, QoS qos=QoS.undefined)
+    {
+        if (qos == QoS.undefined) qos = defaultQoS;
+        tport.publish(topic, data, qos);
+    }
 
     Broadcaster getBroadcaster(string topic) { return new BCaster(topic); }
 

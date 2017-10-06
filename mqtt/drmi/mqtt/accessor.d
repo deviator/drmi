@@ -20,9 +20,10 @@ class MqttAccessor(T) : Accessor!T
 protected:
     MqttTransport tr;
 
+public:
+
     void callTransportLoop() { tr.loop(); }
 
-public:
     SFWApp app;
 
     alias Settings = MosquittoClient.Settings;
