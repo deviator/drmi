@@ -95,12 +95,6 @@ void sbinSerialize(R, T...)(ref R r, auto ref const T vals)
     else foreach (ref v; vals) r.sbinSerialize(v);
 }
 
-/// ditto
-deprecated("use sbinSerialize(ref R r, auto ref const T val) version")
-void sbinSerialize(R, T)(auto ref const T val, ref R r)
-    if (isOutputRange!(R, ubyte))
-{ sbinSerialize(r, val); }
-
 /++ Serialize to ubyte[]
 
     using `appender!(ubyte[])` as output range

@@ -20,12 +20,12 @@ void main()
     acc.connect();
     sleep(2.seconds);
 
-    acc.spawnInfLoop({ testSum(two); });
+    acc.app.spawnInfLoop({ testSum(two); });
 
-    acc.spawnInfLoop({ testFoo(three); });
-    acc.spawnInfLoop({ testBar(three); });
+    acc.app.spawnInfLoop({ testFoo(three); });
+    acc.app.spawnInfLoop({ testBar(three); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
 
-    while (acc.loop()) {}
+    while (acc.app.loop()) { sleep(2.msecs); }
 }

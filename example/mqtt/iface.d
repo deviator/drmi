@@ -43,7 +43,7 @@ void timeoutFail(string msg)
 
 void print(Args...)(Args args)
 {
-    //stderr.writeln(args);
+    stderr.writefln(args);
 }
 
 void testGetTime(One one)

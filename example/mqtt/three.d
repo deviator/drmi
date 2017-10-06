@@ -18,14 +18,14 @@ void main()
     acc.connect();
     sleep(2.seconds);
 
-    acc.spawnInfLoop({ testPrintHello(one); });
-    acc.spawnInfLoop({ testGetTime(one); });
-    acc.spawnInfLoop({ testMagicmath(one); });
-    acc.spawnInfLoop({ testGetArray(one); });
+    acc.app.spawnInfLoop({ testPrintHello(one); });
+    acc.app.spawnInfLoop({ testGetTime(one); });
+    acc.app.spawnInfLoop({ testMagicmath(one); });
+    acc.app.spawnInfLoop({ testGetArray(one); });
 
-    acc.spawnInfLoop({ testSum(two); });
+    acc.app.spawnInfLoop({ testSum(two); });
 
     scope (exit) { stderr.writeln("FAILS: ", failcount); }
 
-    while (acc.loop()) {}
+    while (acc.app.loop()) { sleep(2.msecs); }
 }
