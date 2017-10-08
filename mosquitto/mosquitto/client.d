@@ -84,10 +84,12 @@ public:
             cli._connected = false;
         }
 
-        void onMessageCallback(mosquitto_t mosq, void* cptr, const mosquitto_message* msg)
+        void onMessageCallback(mosquitto_t mosq, void* cptr,
+                                const mosquitto_message* msg)
         {
             auto cli = enforce(cast(MosquittoClient)cptr, "null cli");
-            cli.onMessage(Message(msg.topic.fromStringz.idup, cast(ubyte[])msg.payload[0..msg.payloadlen]));
+            cli.onMessage(Message(msg.topic.fromStringz.idup,
+                       cast(ubyte[])msg.payload[0..msg.payloadlen]));
         }
     }
 
@@ -103,9 +105,8 @@ public:
         foreach (cb; slist)
         {
             bool res;
-            mosqCheck!mosquitto_topic_matches_sub(cb.pattern.toStringz,
-                                              msg.topic.toStringz,
-                                              &res);
+            mosqCheck!mosquitto_topic_matches_sub(
+                cb.pattern.toStringz, msg.topic.toStringz, &res);
             if (res) cb.func(msg.topic, msg.payload);
         }
     }
