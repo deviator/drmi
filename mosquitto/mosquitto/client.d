@@ -94,7 +94,8 @@ public:
     protected void subscribeList()
     {
         foreach (cb; slist)
-            mosqCheck!mosquitto_subscribe(mosq, null, cb.pattern.toStringz, cb.qos);
+            mosqCheck!mosquitto_subscribe(mosq, null,
+                            cb.pattern.toStringz, cb.qos);
     }
 
     protected void onMessage(Message msg)
@@ -115,7 +116,8 @@ public:
 
         settings = s;
 
-        mosq = enforce(mosquitto_new(s.clientId.toStringz, s.cleanSession, cast(void*)this),
+        mosq = enforce(mosquitto_new(s.clientId.toStringz,
+                        s.cleanSession, cast(void*)this),
         format("error while create mosquitto: %d", errno));
 
         mosquitto_connect_callback_set(mosq, &onConnectCallback);
@@ -128,17 +130,29 @@ public:
 
     void loop() { mosqCheck!mosquitto_loop(mosq, 0, 1); }
 
-    void connect() { mosqCheck!mosquitto_connect(mosq, settings.host.toStringz, settings.port, settings.keepalive); }
+    void connect()
+    {
+        mosqCheck!mosquitto_connect(mosq,
+                settings.host.toStringz, settings.port,
+                settings.keepalive);
+    }
+
     void reconnect() { mosqCheck!mosquitto_reconnect(mosq); }
 
     void disconnect() { mosqCheck!mosquitto_disconnect(mosq); }
 
-    void publish(string t, const(ubyte)[] d, int qos=0, bool retain=false)
-    { mosqCheck!mosquitto_publish(mosq, null, t.toStringz, cast(int)d.length, d.ptr, qos, retain); }
+    void publish(string t, const(ubyte)[] d, int qos=0,
+                 bool retain=false)
+    {
+        mosqCheck!mosquitto_publish(mosq, null, t.toStringz,
+        cast(int)d.length, d.ptr, qos, retain);
+    }
 
-    void subscribe(string pattern, void delegate(string, const(ubyte)[]) cb, int qos)
+    void subscribe(string pattern, void delegate(string,
+                    const(ubyte)[]) cb, int qos)
     {
         slist ~= Callback(pattern, cb, qos);
-        if (connected) mosqCheck!mosquitto_subscribe(mosq, null, pattern.toStringz, qos);
+        if (connected) mosqCheck!mosquitto_subscribe(mosq,
+                                null, pattern.toStringz, qos);
     }
 }
