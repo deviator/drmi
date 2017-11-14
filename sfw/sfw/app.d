@@ -59,7 +59,7 @@ public:
     }
 
     ///
-    int exitResult() const @property { return exit_result; }
+    int exitResult() nothrow const @property { return exit_result; }
 
     /// while `work` call not terminate fibers
     bool loop()
