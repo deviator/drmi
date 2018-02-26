@@ -6,7 +6,7 @@ import drmi.core;
 import drmi.ps.helpers;
 import drmi.ps.iface;
 
-import std.datetime;
+import std.datetime.stopwatch;
 import std.string;
 import std.array : appender, Appender;
 import std.exception : enforce;
