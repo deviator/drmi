@@ -13,7 +13,7 @@ dependency ":mqtt" version="*"
 subPackage {
     name "sbin"
     description "Simple binary serialization/deserialization"
-    targetType "sourceLibrary"
+    targetType "library"
     importPaths "sbin"
     sourcePaths "sbin"
 }
@@ -21,14 +21,14 @@ subPackage {
 subPackage {
     name "sfw"
     description "Simple FrameWork and utils for async programs"
-    targetType "sourceLibrary"
+    targetType "library"
     importPaths "sfw"
     sourcePaths "sfw"
 }
 
 subPackage {
     name "core"
-    targetType "sourceLibrary"
+    targetType "library"
     description "Base functionality"
     dependency "drmi:sbin" path="."
     importPaths "core"
@@ -37,7 +37,7 @@ subPackage {
 
 subPackage {
     name "ssll"
-    targetType "sourceLibrary"
+    targetType "library"
     description "Simple Shared Library Loading: minimal boilerplate (see mosquitto.api.rtload)"
     importPaths "ssll"
     sourcePaths "ssll"
