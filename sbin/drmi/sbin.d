@@ -53,20 +53,36 @@ class SBinDeserializeFieldException : SBinDeserializeException
     }
 }
 
+// only for serialize enums based on strings
+private ulong[T] getEnumNums(T)() if (is(T == enum))
+{
+    ulong[T] ret;
+    foreach (i, v; [EnumMembers!T])
+        ret[v] = i;
+    ret.rehash();
+    return ret;
+}
+
 /++ Serialize to output ubyte range
 
     Params:
         val - serializible value
         r - output range
 +/
-void sbinSerialize(R, T...)(ref R r, auto ref const T vals)
-    if (isOutputRange!(R, ubyte) && T.length)
+void sbinSerialize(R, Ts...)(ref R r, auto ref const Ts vals)
+    if (isOutputRange!(R, ubyte) && Ts.length)
 {
-    static if (T.length == 1)
+    static if (Ts.length == 1)
     {
+        alias T = Unqual!(Ts[0]);
         alias val = vals[0];
-        static if (is(Unqual!T : double) || is(Unqual!T : long))
+        static if (is(T : double) || is(T : long))
             r.put(val.pack[]);
+        else static if (is(T == enum))
+        {
+            enum en = getEnumNums!T();
+            r.put(en[val].pack[]);
+        }
         else static if (isStaticArray!T)
             foreach (ref v; val) r.sbinSerialize(v);
         else static if (isSomeString!T)
@@ -165,6 +181,14 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
             foreach (i, ref v; tmp) v = pop(r, _field, T.stringof, i, T.sizeof);
             trg = tmp.unpack!T;
         }
+        else static if (is(T == enum))
+        {
+            ubyte[ulong.sizeof] tmp;
+            version (LDC) auto _field = "<LDC-1.4.0 workaround>";
+            else alias _field = field;
+            foreach (i, ref v; tmp) v = pop(r, _field, T.stringof, i, T.sizeof);
+            trg = [EnumMembers!T][(unpack!ulong(tmp))];
+        }
         else static if (isSomeString!T)
         {
             length_t l;
@@ -175,7 +199,9 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
             trg = cast(T)tmp;
         }
         else static if (isStaticArray!T)
+        {
             foreach (i, ref v; trg) impl(r, v, fi(i));
+        }
         else static if (isDynamicArray!T)
         {
             length_t l;
@@ -211,7 +237,7 @@ void sbinDeserialize(R, Target...)(R range, ref Target target)
         else static assert(0, "unsupported type: " ~ T.stringof);
     }
 
-    static if (target.length == 1)
+    static if (Target.length == 1)
         impl(range, target[0], typeof(target[0]).stringof);
     else foreach (ref v; target)
         impl(range, v, typeof(v).stringof);

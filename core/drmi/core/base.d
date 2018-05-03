@@ -130,8 +130,8 @@ public:
         import std.datetime : Clock;
         import std.exception : enforce;
         import std.typecons : tuple;
-        import std.meta : staticMap;
-        import std.traits : ReturnType, AliasSeq, Parameters, ParameterIdentifierTuple,
+        import std.meta : staticMap, AliasSeq;
+        import std.traits : ReturnType, Parameters, ParameterIdentifierTuple,
                             functionAttributes, FunctionAttribute;
 
         private mixin template impl(F...)
