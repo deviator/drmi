@@ -1,5 +1,8 @@
 ### D Remote Method Invocation
 
+[![Build Status](https://travis-ci.org/deviator/drmi.svg?branch=master)](https://travis-ci.org/deviator/drmi)
+(Posix only)
+
 This package provide high level wraps for remote method invocation and MQTT low level transport (`drmi:mqtt`) as example.
 
 `RMICom` base interface with one method `RMIResponse process(RMICall)`.
