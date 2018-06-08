@@ -117,7 +117,9 @@ public:
 
         settings = s;
 
-        mosq = enforce(mosquitto_new(s.clientId.toStringz,
+        auto clientIdStringz = s.clientId ? s.clientId.toStringz : null;
+
+        mosq = enforce(mosquitto_new(clientIdStringz,
                         s.cleanSession, cast(void*)this),
         format("error while create mosquitto: %d", errno));
 
