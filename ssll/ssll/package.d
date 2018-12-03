@@ -10,12 +10,18 @@ auto api(string lname="lib") @property { return ApiUDA(lname); }
 
 string apiFuncPointerName()(string f) { return "__"~f~"_dlg"; }
 
+///
 void* loadLibrary(string name)
 {
-    return enforce(dlopen(name.toStringz, RTLD_LAZY),
+    return enforce(tryLoadLibrary(name),
                     "can't open shared library " ~ name);
 }
 
+///
+void* tryLoadLibrary(string name)
+{ return dlopen(name.toStringz, RTLD_LAZY); }
+
+///
 void unloadLibrary(void** lib)
 {
     dlclose(lib);
