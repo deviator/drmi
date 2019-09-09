@@ -1,7 +1,7 @@
 ///
 module drmi.core.types;
 
-public import drmi.sbin;
+public import sbin;
 
 ///
 struct RMICall

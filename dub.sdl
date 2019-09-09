@@ -6,17 +6,8 @@ authors "Oleg Butko (deviator)"
 copyright "Copyright © 2017 Oleg Butko"
 license "MIT"
 
-dependency ":sbin" version="*"
 dependency ":core" version="*"
 dependency ":mqtt" version="*"
-
-subPackage {
-    name "sbin"
-    description "Simple binary serialization/deserialization"
-    targetType "library"
-    importPaths "sbin"
-    sourcePaths "sbin"
-}
 
 subPackage {
     name "sfw"
@@ -30,36 +21,9 @@ subPackage {
     name "core"
     targetType "library"
     description "Base functionality"
-    dependency "drmi:sbin" path="."
+    dependency "sbin" version="~>0.3.0"
     importPaths "core"
     sourcePaths "core"
-}
-
-subPackage {
-    name "ssll"
-    targetType "library"
-    description "Simple Shared Library Loading: minimal boilerplate (see mosquitto.api.rtload)"
-    importPaths "ssll"
-    sourcePaths "ssll"
-}
-
-subPackage {
-    name "mosquitto"
-    targetType "library"
-    description "Mosquitto lib binding and minimal wrapper"
-    dependency "drmi:ssll" path="."
-    importPaths "mosquitto"
-    sourcePaths "mosquitto"
-
-    configuration "rtload" {
-        targetType "library"
-    }
-
-    configuration "ctlink" {
-        versions "ctlink"
-        targetType "library"
-        libs "mosquitto"
-    }
 }
 
 subPackage {
@@ -67,8 +31,8 @@ subPackage {
     targetType "library"
     description "MQTT RMI framework"
     dependency "drmi:core" path="."
-    dependency "drmi:mosquitto" path="."
     dependency "drmi:sfw" path="."
+    dependency "mosquittod" version="~>0.1.2"
     importPaths "mqtt"
     sourcePaths "mqtt"
 }

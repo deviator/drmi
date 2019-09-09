@@ -4,7 +4,7 @@ import std.exception : enforce;
 
 public import drmi.ps.iface;
 
-public import mosquitto;
+public import mosquittod;
 
 ///
 class MqttTransport : Transport
@@ -42,9 +42,9 @@ public:
 
     ///
     void publish(string topic, const(ubyte)[] data, QoS qos)
-    { ecli.publish(topic, data, qos); }
+    { ecli.publish(topic, qos, data); }
 
     ///
-    void subscribe(string topic, void delegate(string, const(ubyte)[]) dlg, QoS qos)
-    { ecli.subscribe(topic, dlg, qos); }
+    void subscribe(string pattern, void delegate(const(char)[], const(void)[]) dlg, QoS qos)
+    { ecli.subscribe(pattern, cast(int)qos, dlg); }
 }
